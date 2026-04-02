@@ -1,0 +1,584 @@
+/* ============================================================
+   DLS Hub — Thème officiel Dream League Soccer 26
+   Palette : Navy noir / Violet DLS / Bleu électrique / Crimson
+   ============================================================ */
+
+:root {
+  /* ── Fonds ── */
+  --dls-bg-base:       #07080F;   /* Navy presque noir — fond principal */
+  --dls-bg-card:       #0F1020;   /* Violet très foncé — cards */
+  --dls-bg-elevated:   #161830;   /* Légèrement plus clair — modals, dropdowns */
+  --dls-bg-overlay:    rgba(7, 8, 15, 0.85);
+
+  /* ── Accents ── */
+  --dls-blue:          #1155CC;   /* Bleu électrique DLS */
+  --dls-blue-hover:    #1460E8;
+  --dls-blue-light:    rgba(17, 85, 204, 0.15);
+  --dls-blue-glow:     rgba(17, 85, 204, 0.35);
+
+  --dls-violet:        #5B1DB0;   /* Violet DLS */
+  --dls-violet-light:  rgba(91, 29, 176, 0.20);
+  --dls-violet-mid:    #3D0D5C;
+
+  --dls-crimson:       #A80B1C;   /* Rouge score manuel */
+  --dls-crimson-hover: #8B0923;
+  --dls-crimson-light: rgba(168, 11, 28, 0.15);
+
+  --dls-gold:          #F5A623;   /* Or — champion, MOTM */
+  --dls-gold-light:    rgba(245, 166, 35, 0.15);
+
+  --dls-green:         #16A34A;   /* Vert — victoire, qualifié */
+  --dls-green-light:   rgba(22, 163, 74, 0.15);
+
+  /* ── Texte ── */
+  --dls-text-primary:   #FFFFFF;
+  --dls-text-secondary: #94A3B8;
+  --dls-text-muted:     #64748B;
+  --dls-text-disabled:  #334155;
+
+  /* ── Bordures ── */
+  --dls-border:         rgba(91, 29, 176, 0.25);
+  --dls-border-subtle:  rgba(255, 255, 255, 0.06);
+  --dls-border-focus:   #1155CC;
+
+  /* ── Gradients ── */
+  --dls-gradient-hero: linear-gradient(
+    135deg,
+    #07080F 0%,
+    #1A0A35 30%,
+    #3D0D5C 50%,
+    #5C0A18 70%,
+    #07080F 100%
+  );
+  --dls-gradient-card: linear-gradient(180deg, #0F1020 0%, #07080F 100%);
+  --dls-gradient-blue: linear-gradient(135deg, #1155CC 0%, #1460E8 100%);
+  --dls-gradient-gold:  linear-gradient(135deg, #F5A623 0%, #E8920F 100%);
+
+  /* ── Shadows ── */
+  --dls-shadow-card:  0 4px 24px rgba(0, 0, 0, 0.4);
+  --dls-shadow-glow:  0 0 20px rgba(17, 85, 204, 0.3);
+  --dls-shadow-gold:  0 0 20px rgba(245, 166, 35, 0.3);
+
+  /* ── Radius ── */
+  --dls-radius-sm:  0.375rem;
+  --dls-radius-md:  0.75rem;
+  --dls-radius-lg:  1rem;
+  --dls-radius-xl:  1.5rem;
+  --dls-radius-full: 9999px;
+
+  /* ── Transitions ── */
+  --dls-transition: all 0.2s ease;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--dls-bg-base);
+  color: var(--dls-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--dls-bg-base); }
+::-webkit-scrollbar-thumb { background: var(--dls-violet-light); border-radius: var(--dls-radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--dls-violet); }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.dls-page {
+  min-height: 100vh;
+  background-color: var(--dls-bg-base);
+  padding: 2rem 1rem;
+}
+
+.dls-container {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.dls-hero {
+  background: var(--dls-gradient-hero);
+  position: relative;
+  overflow: hidden;
+}
+
+.dls-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(91,29,176,0.3) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+.dls-navbar {
+  background-color: rgba(7, 8, 15, 0.95);
+  border-bottom: 1px solid var(--dls-border-subtle);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.dls-card {
+  background: var(--dls-bg-card);
+  border: 1px solid var(--dls-border);
+  border-radius: var(--dls-radius-md);
+  box-shadow: var(--dls-shadow-card);
+  transition: var(--dls-transition);
+}
+
+.dls-card:hover {
+  border-color: rgba(91, 29, 176, 0.45);
+  box-shadow: var(--dls-shadow-card), 0 0 0 1px rgba(91,29,176,0.15);
+  transform: translateY(-2px);
+}
+
+.dls-card-elevated {
+  background: var(--dls-bg-elevated);
+  border: 1px solid var(--dls-border);
+  border-radius: var(--dls-radius-md);
+}
+
+/* ============================================================
+   BOUTONS
+   ============================================================ */
+.dls-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--dls-radius-sm);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: var(--dls-transition);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.dls-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.dls-btn-primary {
+  background: var(--dls-gradient-blue);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--dls-blue-glow);
+}
+.dls-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 16px var(--dls-blue-glow);
+  transform: translateY(-1px);
+}
+
+.dls-btn-secondary {
+  background: var(--dls-violet-light);
+  color: var(--dls-text-primary);
+  border: 1px solid var(--dls-border);
+}
+.dls-btn-secondary:hover:not(:disabled) {
+  background: rgba(91, 29, 176, 0.3);
+  transform: translateY(-1px);
+}
+
+.dls-btn-ghost {
+  background: transparent;
+  color: var(--dls-text-secondary);
+}
+.dls-btn-ghost:hover:not(:disabled) {
+  background: var(--dls-border-subtle);
+  color: var(--dls-text-primary);
+}
+
+.dls-btn-danger {
+  background: var(--dls-crimson);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--dls-crimson-light);
+}
+.dls-btn-danger:hover:not(:disabled) {
+  background: var(--dls-crimson-hover);
+  box-shadow: 0 4px 16px var(--dls-crimson-light);
+  transform: translateY(-1px);
+}
+
+.dls-btn-gold {
+  background: var(--dls-gradient-gold);
+  color: #07080F;
+  font-weight: 700;
+}
+.dls-btn-gold:hover:not(:disabled) {
+  box-shadow: var(--dls-shadow-gold);
+  transform: translateY(-1px);
+}
+
+.dls-btn-sm  { padding: 0.375rem 0.875rem; font-size: 0.8125rem; }
+.dls-btn-lg  { padding: 0.875rem 2rem;     font-size: 1rem; }
+.dls-btn-full { width: 100%; }
+
+/* ============================================================
+   BADGES
+   ============================================================ */
+.dls-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.625rem;
+  border-radius: var(--dls-radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dls-badge-blue    { background: var(--dls-blue-light);    color: #4D8EFF; }
+.dls-badge-violet  { background: var(--dls-violet-light);  color: #A78BFA; }
+.dls-badge-green   { background: var(--dls-green-light);   color: #4ADE80; }
+.dls-badge-red     { background: var(--dls-crimson-light); color: #F87171; }
+.dls-badge-gold    { background: var(--dls-gold-light);    color: var(--dls-gold); }
+.dls-badge-gray    { background: rgba(100,116,139,0.15);   color: var(--dls-text-secondary); }
+
+/* Statuts tournoi */
+.dls-badge-registration { background: var(--dls-blue-light);    color: #4D8EFF; }
+.dls-badge-in-progress  { background: var(--dls-green-light);   color: #4ADE80; }
+.dls-badge-finished     { background: var(--dls-gold-light);    color: var(--dls-gold); }
+.dls-badge-draw         { background: var(--dls-violet-light);  color: #A78BFA; }
+
+/* ============================================================
+   FORMULAIRES
+   ============================================================ */
+.dls-input {
+  width: 100%;
+  background: var(--dls-bg-elevated);
+  border: 1px solid var(--dls-border);
+  color: var(--dls-text-primary);
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--dls-radius-sm);
+  font-size: 0.875rem;
+  transition: var(--dls-transition);
+  outline: none;
+}
+
+.dls-input::placeholder { color: var(--dls-text-muted); }
+
+.dls-input:focus {
+  border-color: var(--dls-border-focus);
+  box-shadow: 0 0 0 3px var(--dls-blue-light);
+}
+
+.dls-input-error {
+  border-color: var(--dls-crimson);
+  box-shadow: 0 0 0 3px var(--dls-crimson-light);
+}
+
+.dls-label {
+  display: block;
+  color: var(--dls-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-bottom: 0.375rem;
+}
+
+.dls-select {
+  width: 100%;
+  background: var(--dls-bg-elevated);
+  border: 1px solid var(--dls-border);
+  color: var(--dls-text-primary);
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--dls-radius-sm);
+  font-size: 0.875rem;
+  cursor: pointer;
+  outline: none;
+  transition: var(--dls-transition);
+  appearance: none;
+}
+
+.dls-select:focus {
+  border-color: var(--dls-border-focus);
+  box-shadow: 0 0 0 3px var(--dls-blue-light);
+}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+.dls-table { width: 100%; border-collapse: collapse; }
+
+.dls-table th {
+  background: var(--dls-bg-elevated);
+  color: var(--dls-text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--dls-border);
+}
+
+.dls-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--dls-border-subtle);
+  color: var(--dls-text-primary);
+  font-size: 0.875rem;
+}
+
+.dls-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.dls-table-qualified td { background: var(--dls-green-light) !important; }
+.dls-table-qualified:hover td { background: rgba(22,163,74,0.2) !important; }
+
+/* ============================================================
+   MATCH CARD
+   ============================================================ */
+.dls-match-card {
+  background: var(--dls-bg-card);
+  border: 1px solid var(--dls-border);
+  border-radius: var(--dls-radius-md);
+  padding: 1rem;
+  transition: var(--dls-transition);
+}
+
+.dls-match-card:hover {
+  border-color: rgba(91,29,176,0.45);
+}
+
+.dls-match-card-live {
+  border-color: var(--dls-green);
+  background: linear-gradient(135deg, var(--dls-bg-card) 0%, rgba(22,163,74,0.05) 100%);
+  box-shadow: 0 0 0 1px rgba(22,163,74,0.2), var(--dls-shadow-card);
+}
+
+.dls-match-card-manual {
+  border-color: var(--dls-crimson);
+  background: linear-gradient(135deg, var(--dls-bg-card) 0%, rgba(168,11,28,0.05) 100%);
+}
+
+/* ============================================================
+   SCORE
+   ============================================================ */
+.dls-score { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+.dls-score-winner { color: var(--dls-green); }
+.dls-score-loser  { color: var(--dls-text-muted); }
+.dls-score-manual { color: var(--dls-crimson); }
+.dls-score-draw   { color: var(--dls-text-secondary); }
+
+/* ============================================================
+   DIVISION BADGES
+   ============================================================ */
+.dls-div-elite1  { background: rgba(168,85,247,0.15); color: #C084FC; }
+.dls-div-elite2  { background: rgba(59,130,246,0.15); color: #60A5FA; }
+.dls-div-elite3  { background: rgba(16,185,129,0.15); color: #34D399; }
+.dls-div-1       { background: rgba(245,158,11,0.15); color: #FCD34D; }
+.dls-div-2       { background: rgba(249,115,22,0.15); color: #FB923C; }
+.dls-div-3       { background: rgba(239,68,68,0.15);  color: #F87171; }
+
+/* ============================================================
+   LIVE INDICATOR
+   ============================================================ */
+.dls-live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--dls-green);
+  border-radius: 50%;
+  animation: dls-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dls-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* ============================================================
+   SPINNER
+   ============================================================ */
+.dls-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--dls-border);
+  border-top-color: var(--dls-blue);
+  border-radius: 50%;
+  animation: dls-spin 0.8s linear infinite;
+}
+
+.dls-spinner-sm { width: 1.25rem; height: 1.25rem; }
+.dls-spinner-lg { width: 3rem;    height: 3rem; }
+
+@keyframes dls-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Double spinner WebSocket */
+.dls-spinner-ws {
+  position: relative;
+  width: 3rem;
+  height: 3rem;
+}
+.dls-spinner-ws::before,
+.dls-spinner-ws::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+.dls-spinner-ws::before {
+  border-top-color: var(--dls-blue);
+  animation: dls-spin 0.8s linear infinite;
+}
+.dls-spinner-ws::after {
+  border-bottom-color: var(--dls-violet);
+  animation: dls-spin 1.2s linear infinite reverse;
+}
+
+/* ============================================================
+   BRACKET
+   ============================================================ */
+.dls-bracket-col { display: flex; flex-direction: column; gap: 1rem; }
+
+.dls-bracket-connector {
+  width: 2rem;
+  border-top: 1px solid var(--dls-border);
+  align-self: center;
+}
+
+/* ============================================================
+   PODIUM
+   ============================================================ */
+.dls-podium-1 {
+  background: linear-gradient(135deg, rgba(245,166,35,0.15) 0%, var(--dls-bg-card) 100%);
+  border: 1px solid rgba(245,166,35,0.4);
+  box-shadow: var(--dls-shadow-gold);
+}
+
+.dls-podium-2 {
+  background: linear-gradient(135deg, rgba(148,163,184,0.1) 0%, var(--dls-bg-card) 100%);
+  border: 1px solid rgba(148,163,184,0.3);
+}
+
+.dls-podium-3 {
+  background: linear-gradient(135deg, rgba(180,83,9,0.1) 0%, var(--dls-bg-card) 100%);
+  border: 1px solid rgba(180,83,9,0.3);
+}
+
+/* ============================================================
+   FORM STEPS (stepper)
+   ============================================================ */
+.dls-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--dls-text-muted);
+}
+
+.dls-step-dot {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  border: 2px solid var(--dls-border);
+  background: var(--dls-bg-elevated);
+  color: var(--dls-text-muted);
+  transition: var(--dls-transition);
+}
+
+.dls-step-active .dls-step-dot {
+  background: var(--dls-blue);
+  border-color: var(--dls-blue);
+  color: #fff;
+  box-shadow: 0 0 12px var(--dls-blue-glow);
+}
+
+.dls-step-done .dls-step-dot {
+  background: var(--dls-green);
+  border-color: var(--dls-green);
+  color: #fff;
+}
+
+.dls-step-line {
+  flex: 1;
+  height: 1px;
+  background: var(--dls-border);
+}
+
+.dls-step-line-done { background: var(--dls-green); }
+
+/* ============================================================
+   TABS (navigation vues tournoi)
+   ============================================================ */
+.dls-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: var(--dls-bg-elevated);
+  border: 1px solid var(--dls-border);
+  border-radius: var(--dls-radius-md);
+  padding: 0.25rem;
+}
+
+.dls-tab {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--dls-radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--dls-text-muted);
+  cursor: pointer;
+  transition: var(--dls-transition);
+  text-align: center;
+  border: none;
+  background: transparent;
+}
+
+.dls-tab:hover { color: var(--dls-text-primary); background: var(--dls-border-subtle); }
+
+.dls-tab-active {
+  background: var(--dls-blue);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--dls-blue-glow);
+}
+
+/* ============================================================
+   TOAST (react-hot-toast override)
+   ============================================================ */
+.dls-toast {
+  background: var(--dls-bg-elevated) !important;
+  color: var(--dls-text-primary) !important;
+  border: 1px solid var(--dls-border) !important;
+  border-radius: var(--dls-radius-md) !important;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px) {
+  .dls-page { padding: 1rem 0.75rem; }
+  .dls-btn-lg { padding: 0.75rem 1.25rem; font-size: 0.9375rem; }
+  .dls-tabs { overflow-x: auto; }
+}

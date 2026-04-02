@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import './styles/dls-theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: #07080F;
+    color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* ── Inputs ── */
+  .input {
+    @apply flex h-10 w-full rounded-md px-3 py-2 text-sm outline-none transition-all;
+    background: #161830;
+    border: 1px solid rgba(91, 29, 176, 0.25);
+    color: #ffffff;
+  }
+  .input::placeholder { color: #64748b; }
+  .input:focus {
+    border-color: #1155CC;
+    box-shadow: 0 0 0 3px rgba(17, 85, 204, 0.15);
+  }
+
+  /* ── Labels ── */
+  .label {
+    @apply block text-sm font-medium mb-1;
+    color: #94A3B8;
+  }
+
+  /* ── Danger text ── */
+  .text-danger { color: #F87171; }
+  .border-danger { border-color: #A80B1C; }
+
+  /* ── Loading spinner ── */
+  .loading-spinner {
+    @apply rounded-full animate-spin;
+    border: 2px solid rgba(91, 29, 176, 0.25);
+    border-top-color: #1155CC;
+  }
+
+  /* ── Status badges ── */
+  .status-pending  { @apply bg-yellow-500/10 text-yellow-400; }
+  .status-active   { @apply bg-green-500/10  text-green-400; }
+  .status-completed{ @apply bg-gray-500/10   text-gray-400; }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  /* Animations */
+  .animate-in  { animation: fadeIn  0.4s ease-out; }
+  .animate-up  { animation: slideUp 0.3s ease-out; }
+
+  @keyframes fadeIn  { from { opacity: 0; }                          to { opacity: 1; } }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+}

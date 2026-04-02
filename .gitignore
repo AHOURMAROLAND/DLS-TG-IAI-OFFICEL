@@ -1,0 +1,26 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+backend/dlshub.db
+backend/logs/
+backend/backend_startup.log
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# DB à la racine
+dlshub.db
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
