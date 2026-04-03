@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Trophy, Menu, X, Plus, LogIn } from 'lucide-react'
 
 const Header: React.FC = () => {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+
+  const isActive = (path: string) => pathname === path
 
   return (
     <header className="dls-navbar">
@@ -22,20 +25,22 @@ const Header: React.FC = () => {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
-            <Link to="/" className="dls-btn dls-btn-ghost dls-btn-sm" style={{ color: '#94A3B8' }}>
+            <Link to="/" className="dls-btn dls-btn-ghost dls-btn-sm"
+              style={{ color: isActive('/') ? '#fff' : '#94A3B8', fontWeight: isActive('/') ? 600 : 400 }}>
               Tournois
             </Link>
-            <Link to="/create" className="dls-btn dls-btn-ghost dls-btn-sm" style={{ color: '#94A3B8' }}>
+            <Link to="/create" className="dls-btn dls-btn-ghost dls-btn-sm"
+              style={{ color: isActive('/create') ? '#fff' : '#94A3B8', fontWeight: isActive('/create') ? 600 : 400 }}>
               Créer
+            </Link>
+            <Link to="/join" className="dls-btn dls-btn-ghost dls-btn-sm"
+              style={{ color: isActive('/join') ? '#fff' : '#94A3B8', fontWeight: isActive('/join') ? 600 : 400 }}>
+              Rejoindre
             </Link>
           </nav>
 
           {/* Actions */}
           <div className="hidden md:flex items-center gap-2">
-            <button onClick={() => navigate('/join')}
-              className="dls-btn dls-btn-ghost dls-btn-sm flex items-center gap-1.5">
-              <LogIn size={14} /> Rejoindre
-            </button>
             <button onClick={() => navigate('/create')}
               className="dls-btn dls-btn-primary dls-btn-sm flex items-center gap-1.5">
               <Plus size={14} /> Créer
@@ -56,14 +61,14 @@ const Header: React.FC = () => {
           <div className="dls-container py-3 flex flex-col gap-1">
             <Link to="/" onClick={() => setOpen(false)}
               className="dls-btn dls-btn-ghost text-left justify-start" style={{ color: '#94A3B8' }}>
-              Tournois
+              🏆 Tournois
             </Link>
             <Link to="/join" onClick={() => setOpen(false)}
               className="dls-btn dls-btn-ghost text-left justify-start" style={{ color: '#94A3B8' }}>
-              Rejoindre
+              <LogIn size={14} /> Rejoindre
             </Link>
             <Link to="/create" onClick={() => setOpen(false)}
-              className="dls-btn dls-btn-primary mt-1">
+              className="dls-btn dls-btn-primary mt-1 flex items-center gap-1.5">
               <Plus size={14} /> Créer un tournoi
             </Link>
           </div>

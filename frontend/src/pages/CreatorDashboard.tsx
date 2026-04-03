@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers, useMatches } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, getCreatorSession, formatRelative } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, getCreatorSession, getCreatorSessionForSlug, formatRelative } from '../lib/utils'
 import api from '../lib/api'
 
 interface ActivityItem {

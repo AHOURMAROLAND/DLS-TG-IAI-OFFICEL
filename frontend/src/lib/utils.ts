@@ -162,10 +162,24 @@ export function matchAllowsExtraTime(phase: MatchPhase, roundNumber: number): bo
 
 const SESSION_KEY = 'dls_creator_session'
 const SESSION_SLUG_KEY = 'dls_creator_slug'
+const SESSION_MAP_KEY = 'dls_creator_sessions' // map slug → token pour tous les tournois créés
 
 export function saveCreatorSession(token: string, slug: string) {
+  // Sauvegarder le dernier (compatibilité)
   localStorage.setItem(SESSION_KEY, token)
   localStorage.setItem(SESSION_SLUG_KEY, slug)
+  // Sauvegarder dans la map complète slug → token
+  const map = getCreatorSessionMap()
+  map[slug] = token
+  localStorage.setItem(SESSION_MAP_KEY, JSON.stringify(map))
+}
+
+export function getCreatorSessionMap(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_MAP_KEY) || '{}')
+  } catch {
+    return {}
+  }
 }
 
 export function getCreatorSession(): string | null {
@@ -181,8 +195,24 @@ export function clearCreatorSession() {
   localStorage.removeItem(SESSION_SLUG_KEY)
 }
 
+/**
+ * Vérifie si l'utilisateur est le créateur d'un tournoi.
+ * Cherche dans tous les tokens sauvegardés, pas seulement le dernier.
+ */
 export function isCreatorOf(creatorSession: string): boolean {
-  return getCreatorSession() === creatorSession
+  // Vérifier d'abord le token courant (rapide)
+  if (getCreatorSession() === creatorSession) return true
+  // Vérifier dans la map complète (tous les tournois créés)
+  const map = getCreatorSessionMap()
+  return Object.values(map).includes(creatorSession)
+}
+
+/**
+ * Retourne le token créateur pour un slug donné.
+ */
+export function getCreatorSessionForSlug(slug: string): string | null {
+  const map = getCreatorSessionMap()
+  return map[slug] ?? null
 }
 
 // ─── Misc ─────────────────────────────────────────────────────────────────────
