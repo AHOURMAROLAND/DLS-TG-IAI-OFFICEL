@@ -1,4 +1,3 @@
-import React from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Trophy, Users, BarChart2, Calendar, Grid } from 'lucide-react'
 

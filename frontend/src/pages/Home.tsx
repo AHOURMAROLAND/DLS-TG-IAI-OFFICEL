@@ -4,6 +4,7 @@ import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, getCreatorSession, isCreatorOf } from '../lib/utils'
 import type { Tournament } from '../lib/api'
+import { SkeletonMatchList } from '../components/ui/Skeleton'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -125,9 +126,7 @@ export default function Home() {
         </h2>
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <span className="dls-spinner" />
-          </div>
+          <SkeletonMatchList count={3} />
         ) : otherTournaments.length === 0 && myTournaments.length === 0 ? (
           <div className="dls-card p-10 text-center">
             <Trophy size={40} style={{ color: '#334155', margin: '0 auto 12px' }} />

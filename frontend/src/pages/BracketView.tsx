@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trophy, Edit3 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useBracket, useTournament } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { matchPhaseLabel } from '../lib/utils'
 import TournamentNav from '../components/layout/TournamentNav'
 import type { Match } from '../lib/api'
+import { SkeletonMatchList } from '../components/ui/Skeleton'
+import LottiePlayer from '../components/ui/LottiePlayer'
 
 export default function BracketView() {
   const navigate = useNavigate()
@@ -15,10 +18,26 @@ export default function BracketView() {
   const { data: bracketData, isLoading } = useBracket(slug)
   const qc = useQueryClient()
   const [activeTab, setActiveTab] = useState<'winners' | 'losers'>('winners')
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const onWsMessage = useCallback((msg: any) => {
     if (msg.event === 'match_validated') {
       qc.invalidateQueries({ queryKey: ['bracket', slug] })
+      // Toast personnalisé avec le score
+      if (msg.home_score !== undefined && msg.away_score !== undefined) {
+        const scoreText = `${msg.home_score} – ${msg.away_score}${msg.is_manual ? ' ✎' : ''}`
+        toast.success(`⚽ Score validé : ${scoreText}`, {
+          duration: 4000,
+          style: {
+            background: '#161830',
+            color: '#fff',
+            border: '1px solid rgba(22,163,74,0.4)',
+          },
+        })
+        // Confettis Lottie pendant 3s
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 3000)
+      }
     }
   }, [slug, qc])
 
@@ -34,6 +53,17 @@ export default function BracketView() {
 
   return (
     <div className="dls-page max-w-5xl mx-auto">
+      {/* Confettis sur validation */}
+      {showConfetti && (
+        <div className="dls-confetti-overlay">
+          <LottiePlayer
+            src="/lottie/confetti.json"
+            loop={false}
+            style={{ width: '100%', height: '100%' }}
+          />
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Bracket</h1>
         <div className="flex items-center gap-2">
@@ -69,7 +99,7 @@ export default function BracketView() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-16"><span className="dls-spinner dls-spinner-lg" /></div>
+        <SkeletonMatchList count={4} />
       ) : phases.length === 0 ? (
         <div className="dls-card p-10 text-center">
           <Trophy size={40} style={{ color: '#334155', margin: '0 auto 12px' }} />

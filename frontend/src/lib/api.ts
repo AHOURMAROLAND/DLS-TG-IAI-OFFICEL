@@ -18,6 +18,17 @@ export type MatchPhase =
   | 'group' | 'r16' | 'quarterfinal' | 'semifinal' | 'final'
   | 'championship' | 'double_first' | 'double_second'
 
+export interface GroupSuggestion {
+  group_count: number
+  teams_per_group: number
+  qualified_per_group: number
+  total_qualified: number
+  next_power_of_2: number
+  best_thirds: number
+  is_clean: boolean
+  label: string
+}
+
 export interface Tournament {
   id: string
   slug: string
@@ -181,7 +192,7 @@ class ApiClient {
 
   constructor() {
     this.http = axios.create({
-      baseURL: '/api',
+      baseURL: import.meta.env.VITE_API_URL ?? '/api',
       timeout: 15_000,
       withCredentials: true, // envoie les cookies (creator_session)
     })
@@ -227,6 +238,23 @@ class ApiClient {
   async createTournament(form: FormData): Promise<Tournament> {
     const r = await this.http.post('/tournaments/', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return r.data
+  }
+
+  async getValidSizes(tournamentType: string): Promise<{ valid_sizes: number[] }> {
+    const r = await this.http.get('/tournaments/config/valid-sizes', {
+      params: { tournament_type: tournamentType },
+    })
+    return r.data
+  }
+
+  async getGroupSuggestions(maxTeams: number): Promise<{
+    max_teams: number
+    suggestions: GroupSuggestion[]
+  }> {
+    const r = await this.http.get('/tournaments/config/group-suggestions', {
+      params: { max_teams: maxTeams },
     })
     return r.data
   }

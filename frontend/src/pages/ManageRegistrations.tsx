@@ -1,14 +1,15 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Users, CheckCircle, XCircle, ArrowLeft, Filter } from 'lucide-react'
+import { Users, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePlayers, useTournament } from '../hooks/useTournament'
 import { divisionLabel, divisionClass, getCreatorSession } from '../lib/utils'
 import api from '../lib/api'
 import type { PlayerStatus } from '../lib/api'
+import { SkeletonMatchList } from '../components/ui/Skeleton'
 
-type Filter = 'all' | PlayerStatus
+type FilterType = 'all' | PlayerStatus
 
 export default function ManageRegistrations() {
   const navigate = useNavigate()
@@ -16,7 +17,7 @@ export default function ManageRegistrations() {
   const qc = useQueryClient()
   const { data: t } = useTournament(slug)
   const { data: players = [], isLoading } = usePlayers(slug)
-  const [filter, setFilter] = useState<Filter>('all')
+  const [filter, setFilter] = useState<FilterType>('all')
   const [acting, setActing] = useState<string | null>(null)
 
   const session = getCreatorSession()
@@ -43,7 +44,7 @@ export default function ManageRegistrations() {
     rejected: players.filter(p => p.status === 'rejected').length,
   }
 
-  const FILTERS: { key: Filter; label: string; color: string }[] = [
+  const FILTERS: { key: FilterType; label: string; color: string }[] = [
     { key: 'all',      label: `Tous (${counts.all})`,           color: '#94A3B8' },
     { key: 'pending',  label: `En attente (${counts.pending})`, color: '#4D8EFF' },
     { key: 'accepted', label: `Acceptés (${counts.accepted})`,  color: '#4ADE80' },
@@ -79,7 +80,7 @@ export default function ManageRegistrations() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><span className="dls-spinner" /></div>
+        <SkeletonMatchList count={4} />
       ) : filtered.length === 0 ? (
         <div className="dls-card p-10 text-center">
           <Users size={36} style={{ color: '#334155', margin: '0 auto 12px' }} />

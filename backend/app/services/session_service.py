@@ -37,16 +37,16 @@ def session_expires_at(created_at: datetime) -> datetime:
 def set_session_cookie(response, token: str, key: str = "creator_session") -> None:
     """
     Pose le cookie de session sur la réponse FastAPI.
-    HttpOnly + SameSite=Lax pour la sécurité.
-    Durée : 30 jours.
+    HttpOnly + SameSite=Lax. secure=True automatiquement en production.
     """
+    from ..config import settings
     response.set_cookie(
         key=key,
         value=token,
         max_age=SESSION_MAX_AGE_SECONDS,
         httponly=True,
         samesite="lax",
-        secure=False,  # Passer à True en production (HTTPS)
+        secure=settings.is_production,
     )
 
 

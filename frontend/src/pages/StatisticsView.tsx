@@ -1,13 +1,13 @@
-import React, { useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import { Star, Target, Zap } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useScorers, useMatches, useTournament } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
 import TournamentNav from '../components/layout/TournamentNav'
+import { SkeletonTable } from '../components/ui/Skeleton'
 
 export default function StatisticsView() {
-  const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
   const { data: t } = useTournament(slug)
   const { data: scorers = [], isLoading } = useScorers(slug)
@@ -62,7 +62,7 @@ export default function StatisticsView() {
             <p className="font-semibold text-white text-sm">Meilleurs buteurs</p>
           </div>
           {isLoading ? (
-            <div className="flex justify-center py-8"><span className="dls-spinner dls-spinner-sm" /></div>
+            <SkeletonTable rows={5} />
           ) : topScorers.length === 0 ? (
             <p className="text-xs text-center py-6" style={{ color: '#64748B' }}>Aucun but enregistré</p>
           ) : (

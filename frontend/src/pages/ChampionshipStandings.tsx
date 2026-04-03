@@ -1,10 +1,11 @@
-import React, { useCallback } from 'react'
+import { useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Medal, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useStandings, useTournament } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
 import TournamentNav from '../components/layout/TournamentNav'
+import { SkeletonTable } from '../components/ui/Skeleton'
 
 export default function ChampionshipStandings() {
   const navigate = useNavigate()
@@ -26,7 +27,7 @@ export default function ChampionshipStandings() {
       <TournamentNav />
 
       {isLoading ? (
-        <div className="flex justify-center py-16"><span className="dls-spinner dls-spinner-lg" /></div>
+        <SkeletonTable rows={6} />
       ) : standings.length === 0 ? (
         <div className="dls-card p-10 text-center">
           <p className="text-white font-medium">Aucune donnée de classement</p>

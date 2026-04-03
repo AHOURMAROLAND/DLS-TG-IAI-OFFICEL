@@ -4,6 +4,7 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/**/*.pyc
 backend/.env
+backend/.env.production
 backend/dlshub.db
 backend/logs/
 backend/backend_startup.log

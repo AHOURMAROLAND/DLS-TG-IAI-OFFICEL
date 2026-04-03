@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trophy, Users, Settings, Shuffle, CheckSquare, Copy, Check, ArrowRight, UserPlus, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers, useMatches } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, isCreatorOf, getCreatorSession, formatRelative } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, getCreatorSession, formatRelative } from '../lib/utils'
 import api from '../lib/api'
 
 interface ActivityItem {
@@ -24,6 +24,7 @@ export default function CreatorDashboard() {
   const { data: matches = [] } = useMatches(slug)
   const [copied, setCopied] = useState(false)
   const [activity, setActivity] = useState<ActivityItem[]>([])
+  const [onlineCount, setOnlineCount] = useState(0)
 
   // Modal inscription créateur
   const [showCreatorModal, setShowCreatorModal] = useState(false)
@@ -36,6 +37,10 @@ export default function CreatorDashboard() {
 
   // WebSocket — fil d'activité en temps réel
   const onWs = useCallback((msg: any) => {
+    if (msg.event === 'online_count') {
+      setOnlineCount(msg.count)
+      return
+    }
     const newItem: ActivityItem = {
       id: Date.now().toString(),
       time: new Date(),
@@ -147,12 +152,30 @@ export default function CreatorDashboard() {
         }
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-white truncate">{t.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className={tournamentStatusClass(t.status)}>{tournamentStatusLabel(t.status)}</span>
             <span className="text-xs" style={{ color: '#64748B' }}>{tournamentTypeLabel(t.tournament_type)}</span>
+            {onlineCount > 0 && (
+              <span className="dls-online-badge">
+                <span className="dls-live-dot" style={{ width: 6, height: 6 }} />
+                {onlineCount} en ligne
+              </span>
+            )}
           </div>
+          {/* Barre de progression inscriptions */}
+          {t.status === 'registration' && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs mb-1" style={{ color: '#64748B' }}>
+                <span>{accepted} inscrits</span>
+                <span>{t.max_teams} max</span>
+              </div>
+              <div className="dls-progress-bar">
+                <div className="dls-progress-fill"
+                  style={{ width: `${Math.min((accepted / t.max_teams) * 100, 100)}%` }} />
+              </div>
+            </div>
+          )}
         </div>
-        {/* Bouton s'inscrire comme joueur */}
         {!alreadyRegistered && (
           <button onClick={() => setShowCreatorModal(true)}
             className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 flex-shrink-0">

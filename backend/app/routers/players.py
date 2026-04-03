@@ -271,7 +271,6 @@ async def get_tournament_players(slug: str, db: AsyncSession = Depends(get_db)):
             "pseudo": p.pseudo,
             "dll_idx": p.dll_idx,
             "team_name": p.team_name,
-            # URL du logo via l'endpoint dédié
             "team_logo_url": f"/api/players/logo/{p.id}" if p.logo_data else None,
             "dll_division": p.dll_division,
             "dll_played": p.dll_played,

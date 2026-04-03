@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Upload, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -7,7 +7,6 @@ import toast from 'react-hot-toast'
 export default function UploadLogo() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
-  const location = useLocation()
   const [logo, setLogo] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
 

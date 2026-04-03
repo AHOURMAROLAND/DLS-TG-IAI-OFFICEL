@@ -19,6 +19,49 @@ from ..utils.logger import logger
 router = APIRouter()
 
 
+@router.get("/config/valid-sizes")
+async def get_valid_sizes(tournament_type: str):
+    """
+    Retourne les nombres d'équipes valides pour un format donné.
+    Utilisé par le frontend pour afficher les options disponibles.
+    """
+    from ..services.tournament_config import get_valid_team_counts
+    sizes = get_valid_team_counts(tournament_type)
+    if not sizes:
+        raise HTTPException(400, f"Format inconnu : {tournament_type}")
+    return {"tournament_type": tournament_type, "valid_sizes": sizes}
+
+
+@router.get("/config/group-suggestions")
+async def get_group_suggestions(max_teams: int):
+    """
+    Retourne les configurations de poules suggérées pour un nombre d'équipes.
+    Triées par pertinence (configs propres en premier).
+    """
+    from ..services.tournament_config import suggest_group_configs, validate_tournament_size
+    validation = validate_tournament_size("groups", max_teams)
+    if not validation.valid:
+        raise HTTPException(400, validation.error)
+
+    configs = suggest_group_configs(max_teams)
+    return {
+        "max_teams": max_teams,
+        "suggestions": [
+            {
+                "group_count": c.group_count,
+                "teams_per_group": c.teams_per_group,
+                "qualified_per_group": c.qualified_per_group,
+                "total_qualified": c.total_qualified,
+                "next_power_of_2": c.next_power_of_2,
+                "best_thirds": c.best_thirds,
+                "is_clean": c.is_clean,
+                "label": c.label,
+            }
+            for c in configs
+        ],
+    }
+
+
 @router.post("/", response_model=TournamentOut)
 async def create_tournament(
     name: str = Form(...),
@@ -35,6 +78,15 @@ async def create_tournament(
 ):
     session_token = generate_session_token()
     slug = generate_tournament_slug()
+
+    # Valider le nombre d'équipes selon le format
+    from ..services.tournament_config import validate_tournament_size
+    validation = validate_tournament_size(tournament_type, max_teams, elimination_type)
+    if not validation.valid:
+        msg = validation.error
+        if validation.suggestion:
+            msg += f" — Suggestion : {validation.suggestion}"
+        raise HTTPException(400, msg)
 
     logo_data = None
     logo_content_type = None
@@ -168,6 +220,9 @@ async def delete_tournament(
 
     logger.info(f"Tournament deleted: {slug}")
     return {"message": "Tournoi supprimé"}
+
+
+@router.post("/{slug}/draw")
 async def generate_draw(slug: str, body: DrawRequest, db: AsyncSession = Depends(get_db)):
     """
     Génère un aperçu du tirage (preview) sans persister les matchs.

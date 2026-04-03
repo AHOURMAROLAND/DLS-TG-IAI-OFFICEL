@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Search, Trophy, Users, ArrowLeft, CheckCircle } from 'lucide-react'
-import toast from 'react-hot-toast'
 import api from '../lib/api'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
 import type { Tournament } from '../lib/api'

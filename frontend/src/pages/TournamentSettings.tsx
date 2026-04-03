@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTournament } from '../hooks/useTournament'
 import { copyToClipboard, getCreatorSession, tournamentTypeLabel } from '../lib/utils'
 import api from '../lib/api'
+import QRCodeCard from '../components/ui/QRCodeCard'
 
 export default function TournamentSettings() {
   const navigate = useNavigate()
@@ -25,7 +26,6 @@ export default function TournamentSettings() {
   }, [t])
 
   const session = getCreatorSession()
-  const shareUrl = `${window.location.origin}/tournament/${slug}/bracket`
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -146,19 +146,26 @@ export default function TournamentSettings() {
         ))}
       </div>
 
-      {/* Partage */}
+      {/* QR Code + Partage */}
       <div className="dls-card p-5 mb-4">
-        <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <Share2 size={14} style={{ color: '#4D8EFF' }} /> Partage
+        <p className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Share2 size={14} style={{ color: '#4D8EFF' }} /> Partage & QR Code
         </p>
-        <p className="text-xs mb-3" style={{ color: '#64748B' }}>URL publique du bracket (lecture seule)</p>
-        <div className="flex gap-2">
-          <code className="flex-1 text-xs rounded-lg px-3 py-2 truncate"
-            style={{ background: 'rgba(255,255,255,0.04)', color: '#4D8EFF', border: '1px solid rgba(17,85,204,0.2)' }}>
-            {shareUrl}
-          </code>
-          <button onClick={() => { copyToClipboard(shareUrl); toast.success('Copié !') }}
-            className="dls-btn dls-btn-secondary dls-btn-sm">Copier</button>
+        <QRCodeCard
+          url={`${window.location.origin}/join/${slug}`}
+          slug={slug ?? ''}
+          label="Lien d'invitation"
+        />
+        <div className="mt-3">
+          <p className="text-xs mb-2" style={{ color: '#64748B' }}>URL publique du bracket</p>
+          <div className="flex gap-2">
+            <code className="flex-1 text-xs rounded-lg px-3 py-2 truncate"
+              style={{ background: 'rgba(255,255,255,0.04)', color: '#4D8EFF', border: '1px solid rgba(17,85,204,0.2)' }}>
+              {`${window.location.origin}/tournament/${slug}/bracket`}
+            </code>
+            <button onClick={() => { copyToClipboard(`${window.location.origin}/tournament/${slug}/bracket`); toast.success('Copié !') }}
+              className="dls-btn dls-btn-secondary dls-btn-sm">Copier</button>
+          </div>
         </div>
       </div>
 

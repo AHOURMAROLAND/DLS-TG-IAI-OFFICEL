@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Search, CheckCircle, ArrowLeft, Trophy, Users, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
