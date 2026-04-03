@@ -5,8 +5,7 @@ from ..database import get_db
 from ..models.match import Match, MatchStatus, MatchPhase
 from ..models.player import Player
 from ..models.tournament import Tournament, TournamentStatus
-from ..schemas.match import MatchValidate, MatchOut
-from ..services.tracker_service import fetch_player_data, find_recent_matches_vs_opponent
+from ..schemas.match import MatchValidate, MatchOutfrom ..services.tracker_service import fetch_player_data, find_recent_matches_vs_opponent
 from ..websocket.manager import manager
 from ..utils.logger import logger
 from datetime import datetime
@@ -161,6 +160,8 @@ async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)
     - Applique la règle des 90 min selon la phase
     - is_manual=True → statut MANUAL, affiché en rouge côté client
     - Broadcast WebSocket à tous les clients du tournoi
+    - Progression automatique du bracket élimination
+    - Détection fin de tournoi (finale validée → FINISHED)
     """
     m_result = await db.execute(select(Match).where(Match.id == str(body.match_id)))
     match = m_result.scalar_one_or_none()
@@ -175,13 +176,9 @@ async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)
     if match.status in (MatchStatus.VALIDATED, MatchStatus.MANUAL):
         raise HTTPException(400, "Ce match a déjà été validé")
 
-    # Appliquer les règles de score selon la phase
     home_score, away_score = _apply_score_rules(
-        body.home_score,
-        body.away_score,
-        body.minutes_played,
-        match.phase,
-        match.round_number,
+        body.home_score, body.away_score,
+        body.minutes_played, match.phase, match.round_number,
     )
 
     match.home_score = home_score
@@ -193,8 +190,91 @@ async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)
     match.status = MatchStatus.MANUAL if body.is_manual else MatchStatus.VALIDATED
     match.dll_match_timestamp = body.dll_match_timestamp
     match.validated_at = datetime.utcnow()
-
     await db.commit()
+
+    # ── Progression automatique du bracket élimination ──────────────────────
+    NEXT_PHASE = {
+        MatchPhase.R16:         MatchPhase.QF,
+        MatchPhase.QF:          MatchPhase.SF,
+        MatchPhase.SF:          MatchPhase.FINAL,
+    }
+    is_elimination = t.tournament_type == "elimination"
+    next_phase = NEXT_PHASE.get(match.phase)
+
+    if is_elimination and next_phase:
+        winner_id = str(match.home_player_id) if home_score > away_score else str(match.away_player_id)
+
+        # Chercher un match de la phase suivante avec une place libre (home ou away = None)
+        next_matches_result = await db.execute(
+            select(Match).where(
+                Match.tournament_id == t.id,
+                Match.phase == next_phase,
+            )
+        )
+        next_matches = next_matches_result.scalars().all()
+
+        placed = False
+        for nm in next_matches:
+            if nm.home_player_id is None:
+                nm.home_player_id = winner_id
+                placed = True
+                break
+            elif nm.away_player_id is None:
+                nm.away_player_id = winner_id
+                placed = True
+                break
+
+        # Si aucun match existant avec place libre, créer un nouveau match
+        if not placed:
+            new_match = Match(
+                tournament_id=t.id,
+                home_player_id=winner_id,
+                away_player_id=None,
+                phase=next_phase,
+                status=MatchStatus.SCHEDULED,
+            )
+            db.add(new_match)
+
+        await db.commit()
+
+    # ── Détection fin de tournoi ─────────────────────────────────────────────
+    if match.phase == MatchPhase.FINAL and is_elimination:
+        t.status = TournamentStatus.FINISHED
+        await db.commit()
+        logger.info(f"Tournament {t.slug} finished — finale validée")
+
+    elif t.tournament_type == "championship":
+        # Vérifier si tous les matchs du championnat sont validés
+        total_result = await db.execute(
+            select(Match).where(Match.tournament_id == t.id)
+        )
+        all_matches = total_result.scalars().all()
+        all_done = all(
+            m.status in (MatchStatus.VALIDATED, MatchStatus.MANUAL)
+            for m in all_matches
+        )
+        if all_done and all_matches:
+            t.status = TournamentStatus.FINISHED
+            await db.commit()
+            logger.info(f"Tournament {t.slug} finished — tous les matchs validés")
+
+    elif t.tournament_type == "groups":
+        # Phase de poules : vérifier si tous les matchs de groupe sont validés
+        group_matches_result = await db.execute(
+            select(Match).where(
+                Match.tournament_id == t.id,
+                Match.phase == MatchPhase.GROUP,
+            )
+        )
+        group_matches = group_matches_result.scalars().all()
+        all_group_done = all(
+            m.status in (MatchStatus.VALIDATED, MatchStatus.MANUAL)
+            for m in group_matches
+        )
+        # Si tous les matchs de groupe sont faits et la finale aussi
+        if match.phase == MatchPhase.FINAL:
+            t.status = TournamentStatus.FINISHED
+            await db.commit()
 
     await manager.broadcast(
         str(t.id),
@@ -208,6 +288,7 @@ async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)
             "away_scorers": body.away_scorers,
             "motm": body.motm,
             "phase": match.phase.value if hasattr(match.phase, "value") else match.phase,
+            "tournament_status": t.status.value if hasattr(t.status, "value") else t.status,
         },
     )
     logger.info(f"Match {match.id} validated: {home_score}-{away_score} (manual={body.is_manual})")
@@ -217,6 +298,7 @@ async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)
         "home_score": home_score,
         "away_score": away_score,
         "is_manual": body.is_manual,
+        "tournament_status": t.status.value if hasattr(t.status, "value") else t.status,
     }
 
 

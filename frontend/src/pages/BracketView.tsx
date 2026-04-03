@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, Edit3, Circle } from 'lucide-react'
+import { Trophy, Edit3 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useBracket, useTournament } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -14,7 +14,6 @@ export default function BracketView() {
   const { data: t } = useTournament(slug)
   const { data: bracketData, isLoading } = useBracket(slug)
   const qc = useQueryClient()
-  const [isLive, setIsLive] = useState(false)
   const [activeTab, setActiveTab] = useState<'winners' | 'losers'>('winners')
 
   const onWsMessage = useCallback((msg: any) => {
@@ -38,9 +37,7 @@ export default function BracketView() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-white">Bracket</h1>
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isLive ? 'dls-live-dot' : ''}`}
-            style={{ background: isLive ? '#16A34A' : '#334155' }} />
-          <span className="text-xs" style={{ color: '#64748B' }}>{isLive ? 'Live' : 'Hors ligne'}</span>
+          <span className="text-xs" style={{ color: '#64748B' }}>Live WebSocket</span>
         </div>
       </div>
 
@@ -80,18 +77,36 @@ export default function BracketView() {
           <p className="text-sm mt-1" style={{ color: '#64748B' }}>Le tirage n'a pas encore été effectué</p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {phases.map(phase => (
-            <div key={phase} className="flex-shrink-0 w-64">
-              <p className="text-xs font-bold mb-3 text-center" style={{ color: '#A78BFA' }}>
-                {matchPhaseLabel(phase as any)}
-              </p>
-              <div className="flex flex-col gap-3">
-                {(bracket[phase] ?? []).map((m: Match) => (
-                  <MatchCard key={m.id} match={m}
-                    onPlayerClick={(pid) => navigate(`/tournament/${slug}/player/${pid}`)} />
-                ))}
+        <div className="flex gap-0 overflow-x-auto pb-4">
+          {phases.map((phase, phaseIdx) => (
+            <div key={phase} className="flex items-stretch flex-shrink-0">
+              {/* Colonne matchs */}
+              <div className="w-60">
+                <p className="text-xs font-bold mb-3 text-center" style={{ color: '#A78BFA' }}>
+                  {matchPhaseLabel(phase as any)}
+                </p>
+                <div className="flex flex-col gap-3">
+                  {(bracket[phase] ?? []).map((m: Match) => (
+                    <div key={m.id} className="relative">
+                      <MatchCard match={m}
+                        onPlayerClick={(pid) => navigate(`/tournament/${slug}/player/${pid}`)} />
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              {/* Connecteurs en L entre colonnes */}
+              {phaseIdx < phases.length - 1 && (
+                <div className="w-8 flex flex-col justify-around flex-shrink-0">
+                  {(bracket[phase] ?? []).filter((_, i) => i % 2 === 0).map((_: any, ci: number) => (
+                    <svg key={ci} viewBox="0 0 32 80" className="w-8"
+                      style={{ height: 80, overflow: 'visible' }}>
+                      <path d="M0 20 H16 V60 H32" fill="none"
+                        stroke="rgba(91,29,176,0.4)" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -101,7 +116,6 @@ export default function BracketView() {
 }
 
 function MatchCard({ match, onPlayerClick }: { match: Match; onPlayerClick: (id: string) => void }) {
-  const isLive = match.status === 'scheduled'
   const isManual = match.is_manual
   const homeWins = (match.home_score ?? 0) > (match.away_score ?? 0)
   const awayWins = (match.away_score ?? 0) > (match.home_score ?? 0)

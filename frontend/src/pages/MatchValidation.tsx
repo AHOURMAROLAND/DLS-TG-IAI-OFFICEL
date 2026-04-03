@@ -7,6 +7,7 @@ import { useMatches } from '../hooks/useTournament'
 import { getCreatorSession, matchPhaseLabel, matchAllowsExtraTime } from '../lib/utils'
 import api from '../lib/api'
 import type { Match, TrackerSuggestion, GoalEvent, CardEvent } from '../lib/api'
+import LottiePlayer from '../components/ui/LottiePlayer'
 
 export default function MatchValidation() {
   const navigate = useNavigate()
@@ -69,10 +70,15 @@ export default function MatchValidation() {
   if (!selectedMatch && pending.length === 0) {
     return (
       <div className="dls-page max-w-xl mx-auto text-center">
-        <div className="dls-card p-10">
-          <CheckCircle size={40} style={{ color: '#4ADE80', margin: '0 auto 12px' }} />
-          <p className="font-bold text-white mb-1">Aucun match en attente</p>
-          <button onClick={() => navigate(`/dashboard/${slug}`)} className="dls-btn dls-btn-secondary mt-4">Retour</button>
+        <div className="dls-card p-10 flex flex-col items-center gap-4">
+          <LottiePlayer
+            src="/lottie/checkmark-success.json"
+            loop={false}
+            style={{ width: 80, height: 80 }}
+            fallback={<CheckCircle size={40} style={{ color: '#4ADE80' }} />}
+          />
+          <p className="font-bold text-white">Aucun match en attente</p>
+          <button onClick={() => navigate(`/dashboard/${slug}`)} className="dls-btn dls-btn-secondary">Retour</button>
         </div>
       </div>
     )

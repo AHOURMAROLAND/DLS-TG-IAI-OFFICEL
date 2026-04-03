@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Shuffle, RotateCcw, CheckCircle, ArrowLeft, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers } from '../hooks/useTournament'
 import { getCreatorSession, divisionLabel, divisionClass } from '../lib/utils'
 import api from '../lib/api'
+import LottiePlayer from '../components/ui/LottiePlayer'
 
 export default function DrawGeneration() {
   const navigate = useNavigate()
@@ -34,7 +35,6 @@ export default function DrawGeneration() {
       setGenerating(false)
     }
   }
-
   const confirm = async () => {
     if (!draw || !session || !slug) return
     if (!window.confirm('Valider ce tirage ? Le tournoi sera lancé.')) return
@@ -99,7 +99,15 @@ export default function DrawGeneration() {
       {/* Badge algo */}
       <div className="dls-card p-3 flex items-center gap-3 mb-5"
         style={{ background: 'rgba(17,85,204,0.08)', borderColor: 'rgba(17,85,204,0.3)' }}>
-        <Shuffle size={16} style={{ color: '#4D8EFF' }} />
+        {generating ? (
+          <LottiePlayer
+            src="/lottie/shuffle-draw.json"
+            style={{ width: 32, height: 32 }}
+            fallback={<Shuffle size={16} style={{ color: '#4D8EFF' }} />}
+          />
+        ) : (
+          <Shuffle size={16} style={{ color: '#4D8EFF' }} />
+        )}
         <div>
           <p className="text-sm font-semibold text-white">Algorithme balanced_draw</p>
           <p className="text-xs" style={{ color: '#64748B' }}>Trié par division DLS — répartition équitable</p>

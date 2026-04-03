@@ -1,14 +1,12 @@
-import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { Trophy, Share2, Medal } from 'lucide-react'
-import { useStandings, useScorers, useMatches, useTournament } from '../hooks/useTournament'
+import { useStandings, useScorers, useMatches } from '../hooks/useTournament'
 import { copyToClipboard } from '../lib/utils'
 import toast from 'react-hot-toast'
+import LottiePlayer from '../components/ui/LottiePlayer'
 
 export default function TournamentFinished() {
-  const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
-  const { data: t } = useTournament(slug)
   const { data: standings = [] } = useStandings(slug)
   const { data: scorers = [] } = useScorers(slug)
   const { data: matches = [] } = useMatches(slug)
@@ -28,12 +26,29 @@ export default function TournamentFinished() {
     <div className="dls-page max-w-lg mx-auto text-center">
       {/* Champion */}
       <div className="dls-card dls-podium-1 p-8 mb-5">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{ background: 'rgba(245,166,35,0.2)' }}>
-          <Trophy size={32} style={{ color: '#F5A623' }} />
+        {/* Animation trophée Lottie */}
+        <div className="flex justify-center mb-2">
+          <LottiePlayer
+            src="/lottie/trophy.json"
+            loop={false}
+            style={{ width: 100, height: 100 }}
+            fallback={
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ background: 'rgba(245,166,35,0.2)' }}>
+                <Trophy size={32} style={{ color: '#F5A623' }} />
+              </div>
+            }
+          />
         </div>
-        <p className="text-xs font-bold mb-2" style={{ color: '#F5A623' }}>CHAMPION</p>
-        {champion ? (
+        {/* Confettis */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+          <LottiePlayer
+            src="/lottie/confetti.json"
+            loop={false}
+            style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
+          />
+        </div>
+        <p className="text-xs font-bold mb-2" style={{ color: '#F5A623' }}>CHAMPION</p>        {champion ? (
           <>
             {champion.team_logo_url && (
               <img src={champion.team_logo_url} alt={champion.pseudo}

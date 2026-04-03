@@ -1,6 +1,6 @@
-import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { LinkIcon, Clock, RefreshCw } from 'lucide-react'
+import LottiePlayer from '../components/ui/LottiePlayer'
 
 interface Props {
   type?: '404' | 'session' | 'loading'
@@ -15,7 +15,11 @@ export default function SystemStates({ type }: Props) {
   if (resolved === 'loading') {
     return (
       <div className="dls-page flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="dls-spinner-ws mb-6" />
+        <LottiePlayer
+          src="/lottie/wifi-connecting.json"
+          style={{ width: 120, height: 120 }}
+          fallback={<div className="dls-spinner-ws mb-6" />}
+        />
         <h2 className="text-xl font-bold text-white mb-2">Synchronisation</h2>
         <p className="text-sm mb-4" style={{ color: '#94A3B8' }}>Connexion WebSocket en cours…</p>
         <div className="w-48 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
@@ -30,10 +34,16 @@ export default function SystemStates({ type }: Props) {
     return (
       <div className="dls-page max-w-md mx-auto text-center">
         <div className="dls-card p-8 flex flex-col items-center gap-5">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(245,166,35,0.12)' }}>
-            <Clock size={32} style={{ color: '#F5A623' }} />
-          </div>
+          <LottiePlayer
+            src="/lottie/clock-pending.json"
+            style={{ width: 80, height: 80 }}
+            fallback={
+              <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(245,166,35,0.12)' }}>
+                <Clock size={32} style={{ color: '#F5A623' }} />
+              </div>
+            }
+          />
           <div>
             <h2 className="text-xl font-bold text-white mb-2">Session expirée</h2>
             <p className="text-sm" style={{ color: '#94A3B8' }}>
@@ -64,10 +74,16 @@ export default function SystemStates({ type }: Props) {
   return (
     <div className="dls-page max-w-md mx-auto text-center">
       <div className="dls-card p-8 flex flex-col items-center gap-5">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(168,11,28,0.12)' }}>
-          <LinkIcon size={32} style={{ color: '#F87171' }} />
-        </div>
+        <LottiePlayer
+          src="/lottie/error-404.json"
+          style={{ width: 140, height: 140 }}
+          fallback={
+            <div className="w-16 h-16 rounded-full flex items-center justify-center"
+              style={{ background: 'rgba(168,11,28,0.12)' }}>
+              <LinkIcon size={32} style={{ color: '#F87171' }} />
+            </div>
+          }
+        />
         <div>
           <p className="text-xs font-bold mb-2" style={{ color: '#F87171' }}>ERREUR 404</p>
           <h2 className="text-xl font-bold text-white mb-2">Lien invalide</h2>

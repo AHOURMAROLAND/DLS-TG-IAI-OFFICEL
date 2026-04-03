@@ -1,33 +1,106 @@
-import React, { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, Users, Calendar, Settings, Shuffle, CheckSquare, Copy, Check, ArrowRight } from 'lucide-react'
+import { Trophy, Users, Settings, Shuffle, CheckSquare, Copy, Check, ArrowRight, UserPlus, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers, useMatches } from '../hooks/useTournament'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, isCreatorOf, formatRelative } from '../lib/utils'
+import { useWebSocket } from '../hooks/useWebSocket'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, isCreatorOf, getCreatorSession, formatRelative } from '../lib/utils'
+import api from '../lib/api'
+
+interface ActivityItem {
+  id: string
+  text: string
+  time: Date
+  type: 'registration' | 'decision' | 'match' | 'draw'
+}
 
 export default function CreatorDashboard() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
+  const qc = useQueryClient()
   const { data: t, isLoading } = useTournament(slug)
   const { data: players = [] } = usePlayers(slug)
   const { data: matches = [] } = useMatches(slug)
   const [copied, setCopied] = useState(false)
+  const [activity, setActivity] = useState<ActivityItem[]>([])
+
+  // Modal inscription créateur
+  const [showCreatorModal, setShowCreatorModal] = useState(false)
+  const [creatorPseudo, setCreatorPseudo] = useState('')
+  const [creatorIdx, setCreatorIdx] = useState('')
+  const [creatorLogo, setCreatorLogo] = useState<File | null>(null)
+  const [registering, setRegistering] = useState(false)
+
+  const session = getCreatorSession()
+
+  // WebSocket — fil d'activité en temps réel
+  const onWs = useCallback((msg: any) => {
+    const newItem: ActivityItem = {
+      id: Date.now().toString(),
+      time: new Date(),
+      type: msg.event === 'new_registration' ? 'registration'
+          : msg.event === 'player_decision' ? 'decision'
+          : msg.event === 'match_validated' ? 'match'
+          : 'draw',
+      text: msg.event === 'new_registration'
+          ? `${msg.player?.pseudo} a demandé à rejoindre`
+          : msg.event === 'player_decision'
+          ? `Joueur ${msg.decision === 'accept' ? 'accepté' : 'refusé'}`
+          : msg.event === 'match_validated'
+          ? `Match validé : ${msg.home_score} – ${msg.away_score}${msg.is_manual ? ' (manuel)' : ''}`
+          : 'Tirage confirmé — tournoi lancé',
+    }
+    setActivity(prev => [newItem, ...prev].slice(0, 10))
+    qc.invalidateQueries({ queryKey: ['players', slug] })
+    qc.invalidateQueries({ queryKey: ['matches', slug] })
+    // Rediriger vers finished si tournoi terminé
+    if (msg.tournament_status === 'finished') {
+      navigate(`/tournament/${slug}/finished`)
+    }
+  }, [slug, qc, navigate])
+
+  useWebSocket(t?.id, onWs)
 
   if (isLoading) return <Loader />
   if (!t) return null
 
-  const isCreator = isCreatorOf(t.creator_session)
   const pending = players.filter(p => p.status === 'pending').length
   const accepted = players.filter(p => p.status === 'accepted').length
   const validated = matches.filter(m => m.status === 'validated' || m.status === 'manual').length
   const awaitingValidation = matches.filter(m => m.status === 'pending_validation').length
   const inviteUrl = `${window.location.origin}/join/${t.slug}`
+  const alreadyRegistered = players.some(p => p.is_creator)
 
   const copy = async () => {
     await copyToClipboard(inviteUrl)
     setCopied(true)
     toast.success('Lien copié !')
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const registerAsCreator = async () => {
+    if (!session || !slug) return
+    if (!creatorPseudo.trim() || !creatorIdx.trim()) {
+      toast.error('Pseudo et idx DLS requis')
+      return
+    }
+    setRegistering(true)
+    try {
+      const fd = new FormData()
+      fd.append('pseudo', creatorPseudo.trim())
+      fd.append('dll_idx', creatorIdx.trim())
+      fd.append('creator_session', session)
+      if (creatorLogo) fd.append('logo', creatorLogo)
+      await api.registerCreator(slug, fd)
+      toast.success('Inscrit comme joueur !')
+      setShowCreatorModal(false)
+      qc.invalidateQueries({ queryKey: ['players', slug] })
+    } catch (e: any) {
+      toast.error(e?.response?.data?.detail || 'Erreur lors de l\'inscription')
+    } finally {
+      setRegistering(false)
+    }
   }
 
   const actions = [
@@ -40,7 +113,7 @@ export default function CreatorDashboard() {
     },
     {
       icon: <Shuffle size={20} />, label: 'Tirage au sort', badge: undefined,
-      desc: t.status === 'registration' ? `${accepted}/${t.max_teams} joueurs` : 'Tirage effectué',
+      desc: t.status === 'registration' || t.status === 'draw' ? `${accepted}/${t.max_teams} joueurs` : 'Tirage effectué',
       color: '#A78BFA', bg: 'rgba(91,29,176,0.12)',
       onClick: () => navigate(`/dashboard/${slug}/draw`),
       disabled: accepted < 2,
@@ -63,7 +136,7 @@ export default function CreatorDashboard() {
 
   return (
     <div className="dls-page max-w-2xl mx-auto">
-      {/* Header tournoi */}
+      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         {t.logo_url
           ? <img src={t.logo_url} alt={t.name} className="w-14 h-14 rounded-xl object-cover" />
@@ -79,10 +152,17 @@ export default function CreatorDashboard() {
             <span className="text-xs" style={{ color: '#64748B' }}>{tournamentTypeLabel(t.tournament_type)}</span>
           </div>
         </div>
+        {/* Bouton s'inscrire comme joueur */}
+        {!alreadyRegistered && (
+          <button onClick={() => setShowCreatorModal(true)}
+            className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 flex-shrink-0">
+            <UserPlus size={14} /> M'inscrire
+          </button>
+        )}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         {[
           { label: 'Joueurs', value: `${accepted}/${t.max_teams}`, sub: `${pending} en attente` },
           { label: 'Matchs joués', value: String(validated), sub: `${awaitingValidation} en attente` },
@@ -98,7 +178,7 @@ export default function CreatorDashboard() {
       </div>
 
       {/* Lien invitation */}
-      <div className="dls-card p-4 mb-6">
+      <div className="dls-card p-4 mb-5">
         <p className="text-xs mb-2" style={{ color: '#64748B' }}>Lien d'invitation</p>
         <div className="flex items-center gap-2">
           <code className="flex-1 text-sm font-mono rounded-lg px-3 py-2 truncate"
@@ -113,7 +193,7 @@ export default function CreatorDashboard() {
       </div>
 
       {/* Actions rapides */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
+      <div className="grid grid-cols-2 gap-3 mb-5">
         {actions.map(a => (
           <button key={a.label} onClick={a.onClick} disabled={a.disabled}
             className="dls-card p-4 text-left transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed relative">
@@ -131,16 +211,16 @@ export default function CreatorDashboard() {
         ))}
       </div>
 
-      {/* Voir les vues tournoi */}
-      {t.status === 'in_progress' || t.status === 'finished' ? (
-        <div className="dls-card p-4">
+      {/* Vues tournoi */}
+      {(t.status === 'in_progress' || t.status === 'finished') && (
+        <div className="dls-card p-4 mb-5">
           <p className="text-xs mb-3" style={{ color: '#64748B' }}>Vues du tournoi</p>
           <div className="flex flex-wrap gap-2">
             {[
-              { label: 'Bracket', path: `/tournament/${slug}/bracket` },
-              { label: 'Poules', path: `/tournament/${slug}/groups` },
+              { label: 'Bracket',    path: `/tournament/${slug}/bracket` },
+              { label: 'Poules',     path: `/tournament/${slug}/groups` },
               { label: 'Classement', path: `/tournament/${slug}/standings` },
-              { label: 'Stats', path: `/tournament/${slug}/stats` },
+              { label: 'Stats',      path: `/tournament/${slug}/stats` },
               { label: 'Calendrier', path: `/tournament/${slug}/calendar` },
             ].map(v => (
               <button key={v.label} onClick={() => navigate(v.path)}
@@ -150,7 +230,79 @@ export default function CreatorDashboard() {
             ))}
           </div>
         </div>
-      ) : null}
+      )}
+
+      {/* Fil d'activité */}
+      {activity.length > 0 && (
+        <div className="dls-card p-4">
+          <p className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: '#94A3B8' }}>
+            <span className="dls-live-dot" /> Activité récente
+          </p>
+          <div className="flex flex-col gap-2">
+            {activity.map(a => (
+              <div key={a.id} className="flex items-center gap-3 text-sm">
+                <span style={{ color: a.type === 'registration' ? '#4D8EFF' : a.type === 'match' ? '#4ADE80' : '#A78BFA' }}>
+                  {a.type === 'registration' ? '👤' : a.type === 'match' ? '⚽' : a.type === 'draw' ? '🎲' : '✅'}
+                </span>
+                <span className="flex-1 text-white text-xs">{a.text}</span>
+                <span className="text-xs flex-shrink-0" style={{ color: '#64748B' }}>
+                  {formatRelative(a.time)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal inscription créateur */}
+      {showCreatorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+          onClick={e => e.target === e.currentTarget && setShowCreatorModal(false)}>
+          <div className="dls-card p-6 w-full max-w-sm flex flex-col gap-4">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <UserPlus size={16} style={{ color: '#4D8EFF' }} /> M'inscrire comme joueur
+            </h2>
+
+            <div>
+              <label className="dls-label">Pseudo dans le tournoi *</label>
+              <input className="dls-input" placeholder="Ton pseudo"
+                value={creatorPseudo} onChange={e => setCreatorPseudo(e.target.value)} />
+            </div>
+
+            <div>
+              <label className="dls-label">Identifiant DLS (idx) *</label>
+              <input className="dls-input font-mono" placeholder="Ex: tqlxy8"
+                value={creatorIdx} onChange={e => setCreatorIdx(e.target.value)} />
+            </div>
+
+            <div>
+              <label className="dls-label">Logo équipe (optionnel)</label>
+              <label htmlFor="creator-logo" className="cursor-pointer block">
+                <div className="border-2 border-dashed rounded-xl p-3 text-center"
+                  style={{ borderColor: 'rgba(91,29,176,0.35)', background: 'rgba(91,29,176,0.05)' }}>
+                  <Upload size={16} style={{ color: '#64748B', margin: '0 auto 4px' }} />
+                  <p className="text-xs" style={{ color: '#64748B' }}>
+                    {creatorLogo ? creatorLogo.name : 'Cliquer pour uploader'}
+                  </p>
+                </div>
+              </label>
+              <input id="creator-logo" type="file" accept="image/*" className="hidden"
+                onChange={e => setCreatorLogo(e.target.files?.[0] ?? null)} />
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setShowCreatorModal(false)}
+                className="dls-btn dls-btn-secondary flex-1">Annuler</button>
+              <button onClick={registerAsCreator} disabled={registering}
+                className="dls-btn dls-btn-primary flex-1">
+                {registering ? <span className="dls-spinner dls-spinner-sm" /> : null}
+                {registering ? 'Inscription...' : 'S\'inscrire'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

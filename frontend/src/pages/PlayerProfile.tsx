@@ -1,10 +1,10 @@
-import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Star, Target, Zap, Trophy, Edit3 } from 'lucide-react'
+import { ArrowLeft, Star, Target, Zap, Trophy, Edit3, Share2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useMatches } from '../hooks/useTournament'
-import { divisionLabel, divisionClass, matchPhaseLabel } from '../lib/utils'
+import { divisionLabel, divisionClass, matchPhaseLabel, copyToClipboard } from '../lib/utils'
 import api from '../lib/api'
+import toast from 'react-hot-toast'
 
 export default function PlayerProfile() {
   const navigate = useNavigate()
@@ -67,6 +67,16 @@ export default function PlayerProfile() {
         <h1 className="text-xl font-bold text-white mb-1">{player.pseudo}</h1>
         <p className="text-sm mb-2" style={{ color: '#94A3B8' }}>{player.team_name}</p>
         <span className={divisionClass(player.dll_division)}>{divisionLabel(player.dll_division)}</span>
+
+        {/* Bouton partage */}
+        <div className="mt-3">
+          <button onClick={() => {
+            copyToClipboard(window.location.href)
+            toast.success('Lien du profil copié !')
+          }} className="dls-btn dls-btn-ghost dls-btn-sm flex items-center gap-1.5 mx-auto">
+            <Share2 size={13} /> Partager ce profil
+          </button>
+        </div>
       </div>
 
       {/* Stats tournoi */}

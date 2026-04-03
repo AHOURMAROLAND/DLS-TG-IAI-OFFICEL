@@ -20,6 +20,13 @@ export default function PlayerRegistration() {
   const [verifying, setVerifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  // Debounce 800ms sur le champ idx
+  useEffect(() => {
+    if (!idx.trim() || idx.length < 4) { setPlayerInfo(null); return }
+    const timer = setTimeout(() => verifyIdx(), 800)
+    return () => clearTimeout(timer)
+  }, [idx])
+
   const verifyIdx = async () => {
     if (!idx.trim()) return
     setVerifying(true)
@@ -113,10 +120,13 @@ export default function PlayerRegistration() {
               value={idx} onChange={e => { setIdx(e.target.value); setPlayerInfo(null) }}
               onKeyDown={e => e.key === 'Enter' && verifyIdx()} />
             <button onClick={verifyIdx} disabled={verifying || !idx.trim()}
-              className="dls-btn dls-btn-primary">
+              className="dls-btn dls-btn-primary" title="Vérifier">
               {verifying ? <span className="dls-spinner dls-spinner-sm" /> : <Search size={16} />}
             </button>
           </div>
+          {idx.length >= 4 && !playerInfo && !verifying && (
+            <p className="text-xs mt-1" style={{ color: '#64748B' }}>Vérification automatique en cours…</p>
+          )}
         </div>
 
         {/* Résultat vérification */}
