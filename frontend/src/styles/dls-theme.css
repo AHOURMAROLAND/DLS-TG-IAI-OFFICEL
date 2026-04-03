@@ -302,6 +302,11 @@ body {
   margin-bottom: 0.375rem;
 }
 
+.dls-input-error {
+  border-color: var(--dls-crimson);
+  box-shadow: 0 0 0 3px var(--dls-crimson-light);
+}
+
 .dls-select {
   width: 100%;
   background: var(--dls-bg-elevated);

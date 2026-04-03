@@ -11,7 +11,7 @@ import type { GroupSuggestion } from '../lib/api'
 import TournamentPreview from '../components/ui/TournamentPreview'
 
 const schema = z.object({
-  name: z.string().min(3).max(100),
+  name: z.string().min(3, 'Minimum 3 caractères').max(100),
   tournament_type: z.enum(['elimination', 'groups', 'championship']),
   elimination_type: z.enum(['single', 'double']).optional(),
   championship_legs: z.enum(['single', 'double']).optional(),
@@ -27,8 +27,8 @@ const ELIM_SIZES = [4, 8, 16, 32]
 const CHAMP_SIZES = Array.from({ length: 9 }, (_, i) => (i + 2) * 2)
 const GROUP_SIZES = Array.from({ length: 21 }, (_, i) => (i + 4) * 2)
 const TYPE_LABELS: Record<string, string> = {
-  elimination: 'Elimination directe',
-  groups: 'Poules + Elimination',
+  elimination: 'Élimination directe',
+  groups: 'Poules + Élimination',
   championship: 'Championnat',
 }
 
@@ -42,9 +42,11 @@ export default function CreateTournament() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<GroupSuggestion | null>(null)
   const [_loadingSuggestions, setLoadingSuggestions] = useState(false)
 
+
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
-    defaultValues: { tournament_type: 'elimination', elimination_type: 'single', championship_legs: 'single', max_teams: 8 },
+    mode: 'onBlur',
+    defaultValues: { name: '', tournament_type: 'elimination', elimination_type: 'single', championship_legs: 'single', max_teams: 8 },
   })
 
   const type = watch('tournament_type')
@@ -96,10 +98,10 @@ export default function CreateTournament() {
       if (logo) fd.append('logo', logo)
       const t = await api.createTournament(fd)
       saveCreatorSession(t.creator_session, t.slug)
-      toast.success('Tournoi cree !')
+      toast.success('Tournoi créé !')
       navigate(`/dashboard/${t.slug}`)
     } catch (e: any) {
-      toast.error(e?.response?.data?.detail || 'Erreur lors de la creation')
+      toast.error(e?.response?.data?.detail || 'Erreur lors de la création')
     } finally { setLoading(false) }
   }
 
@@ -119,6 +121,8 @@ export default function CreateTournament() {
         ))}
       </div>
       <form onSubmit={handleSubmit(onSubmit)}>
+
+
         {step === 0 && (
           <div className="dls-card p-6 flex flex-col gap-5">
             <div className="flex items-center gap-2">
@@ -130,7 +134,7 @@ export default function CreateTournament() {
               <label htmlFor="logo-upload" className="cursor-pointer block">
                 <div className="border-2 border-dashed rounded-xl p-6 text-center" style={{ borderColor: 'rgba(91,29,176,0.35)', background: 'rgba(91,29,176,0.05)' }}>
                   {preview ? <img src={preview} alt="preview" className="w-16 h-16 rounded-lg object-cover mx-auto mb-2" /> : <Upload size={28} style={{ color: '#64748B', margin: '0 auto 8px' }} />}
-                  <p className="text-xs" style={{ color: '#64748B' }}>{logo ? logo.name : 'JPG, PNG, WEBP - max 5 MB'}</p>
+                  <p className="text-xs" style={{ color: '#64748B' }}>{logo ? logo.name : 'JPG, PNG, WEBP — max 5 MB'}</p>
                 </div>
               </label>
               <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogo} />
@@ -159,11 +163,17 @@ export default function CreateTournament() {
           </div>
         )}
 
+
         {step === 1 && (
           <div className="dls-card p-6 flex flex-col gap-5">
-            <h2 className="text-base font-bold text-white">Format et equipes</h2>
+            <h2 className="text-base font-bold text-white">Format & équipes</h2>
             <div>
-              <label className="dls-label">Nombre d equipes *</label>
+              <label className="dls-label flex items-center gap-1.5">
+                Nombre d'équipes *
+                {type === 'elimination' && <span className="text-xs" style={{ color: '#64748B' }}>(puissance de 2)</span>}
+                {type === 'championship' && <span className="text-xs" style={{ color: '#64748B' }}>(pair, max 20)</span>}
+                {type === 'groups' && <span className="text-xs" style={{ color: '#64748B' }}>(pair, 8–48)</span>}
+              </label>
               <div className="grid grid-cols-4 gap-2 max-h-44 overflow-y-auto pr-1">
                 {validSizes.map(n => (
                   <label key={n} className="cursor-pointer">
@@ -177,10 +187,10 @@ export default function CreateTournament() {
             </div>
             {type === 'elimination' && (
               <div>
-                <label className="dls-label">Type elimination</label>
+                <label className="dls-label">Type d'élimination</label>
                 <select {...register('elimination_type')} className="dls-select">
-                  <option value="single">Simple elimination</option>
-                  <option value="double">Double elimination</option>
+                  <option value="single">Simple élimination</option>
+                  <option value="double">Double élimination</option>
                 </select>
               </div>
             )}
@@ -191,22 +201,29 @@ export default function CreateTournament() {
                   <option value="single">Aller simple</option>
                   <option value="double">Aller-retour</option>
                 </select>
+                {maxTeams && <p className="text-xs mt-1.5" style={{ color: '#64748B' }}>{Number(maxTeams) * (Number(maxTeams) - 1) / 2} matchs (aller simple) · {Number(maxTeams) * (Number(maxTeams) - 1)} matchs (aller-retour)</p>}
               </div>
             )}
-            {type === 'groups' && groupSuggestions.length > 0 && (
+            {type === 'groups' && (
               <div>
-                <label className="dls-label">Configuration des poules</label>
-                <div className="flex flex-col gap-2">
-                  {groupSuggestions.map((s, i) => (
-                    <button key={i} type="button" onClick={() => applySuggestion(s)} className="rounded-xl p-3 text-left transition-all" style={{ background: selectedSuggestion === s ? 'rgba(17,85,204,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${selectedSuggestion === s ? '#1155CC' : 'rgba(91,29,176,0.2)'}` }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-white">{s.group_count} poules x {s.teams_per_group} equipes</span>
-                        {s.is_clean ? <span className="dls-badge dls-badge-green">Optimal</span> : <span className="dls-badge dls-badge-blue">+{s.best_thirds} repech</span>}
-                      </div>
-                      <p className="text-xs" style={{ color: '#94A3B8' }}>{s.qualified_per_group} qualifies/poule - {s.next_power_of_2} en phase elim</p>
-                    </button>
-                  ))}
-                </div>
+                <label className="dls-label flex items-center gap-1.5">Configuration des poules <Info size={12} style={{ color: '#64748B' }} /></label>
+                {loadingSuggestions ? (
+                  <div className="flex justify-center py-4"><span className="dls-spinner dls-spinner-sm" /></div>
+                ) : groupSuggestions.length === 0 ? (
+                  <p className="text-xs" style={{ color: '#F87171' }}>Aucune configuration valide</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {groupSuggestions.map((s, i) => (
+                      <button key={i} type="button" onClick={() => applySuggestion(s)} className="rounded-xl p-3 text-left transition-all" style={{ background: selectedSuggestion === s ? 'rgba(17,85,204,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${selectedSuggestion === s ? '#1155CC' : 'rgba(91,29,176,0.2)'}` }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-white">{s.group_count} poules × {s.teams_per_group} équipes</span>
+                          {s.is_clean ? <span className="dls-badge dls-badge-green">Optimal</span> : <span className="dls-badge dls-badge-blue">+{s.best_thirds} repêchés</span>}
+                        </div>
+                        <p className="text-xs" style={{ color: '#94A3B8' }}>{s.qualified_per_group} qualifié(s)/poule → {s.next_power_of_2} en phase élim{s.best_thirds > 0 && ` (dont ${s.best_thirds} meilleur(s) 3ème(s))`}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {Number(maxTeams) >= 4 && (
@@ -214,34 +231,39 @@ export default function CreateTournament() {
             )}
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(0)} className="dls-btn dls-btn-secondary flex items-center gap-1"><ChevronLeft size={16} /> Retour</button>
-              <button type="button" onClick={() => { if (type === 'groups' && !selectedSuggestion) { toast.error('Selectionnez une configuration'); return } setStep(2) }} className="dls-btn dls-btn-primary flex-1 flex items-center justify-center gap-2">Suivant <ChevronRight size={16} /></button>
+              <button type="button" onClick={() => { if (type === 'groups' && !selectedSuggestion) { toast.error('Sélectionnez une configuration de poules'); return } setStep(2) }} className="dls-btn dls-btn-primary flex-1 flex items-center justify-center gap-2">Suivant <ChevronRight size={16} /></button>
             </div>
           </div>
         )}
 
+
         {step === 2 && (
           <div className="dls-card p-6 flex flex-col gap-5">
-            <h2 className="text-base font-bold text-white">Recapitulatif</h2>
+            <h2 className="text-base font-bold text-white">Récapitulatif</h2>
             <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(91,29,176,0.2)' }}>
               {preview && <img src={preview} alt="logo" className="w-14 h-14 rounded-lg object-cover" />}
-              <Row label="Nom" value={values.name || '-'} />
+              <Row label="Nom" value={values.name || '—'} />
               <Row label="Mode" value={TYPE_LABELS[values.tournament_type] || ''} />
-              <Row label="Equipes" value={String(values.max_teams)} />
-              {type === 'elimination' && <Row label="Elimination" value={values.elimination_type === 'double' ? 'Double' : 'Simple'} />}
-              {type === 'championship' && <Row label="Legs" value={values.championship_legs === 'double' ? 'Aller-retour' : 'Aller simple'} />}
-              {type === 'groups' && selectedSuggestion && (
-                <>
-                  <Row label="Poules" value={`${selectedSuggestion.group_count} x ${selectedSuggestion.teams_per_group} equipes`} />
-                  <Row label="Qualifies/poule" value={String(selectedSuggestion.qualified_per_group)} />
-                  <Row label="Phase elim" value={`${selectedSuggestion.next_power_of_2} equipes`} />
-                </>
-              )}
+              <Row label="Équipes" value={String(values.max_teams)} />
+              {type === 'elimination' && <Row label="Élimination" value={values.elimination_type === 'double' ? 'Double' : 'Simple'} />}
+              {type === 'championship' && <>
+                <Row label="Legs" value={values.championship_legs === 'double' ? 'Aller-retour' : 'Aller simple'} />
+                <Row label="Matchs" value={String(values.championship_legs === 'double' ? Number(values.max_teams) * (Number(values.max_teams) - 1) : Number(values.max_teams) * (Number(values.max_teams) - 1) / 2)} />
+              </>}
+              {type === 'groups' && selectedSuggestion && <>
+                <Row label="Poules" value={`${selectedSuggestion.group_count} × ${selectedSuggestion.teams_per_group} équipes`} />
+                <Row label="Qualifiés/poule" value={String(selectedSuggestion.qualified_per_group)} />
+                <Row label="Phase élim" value={`${selectedSuggestion.next_power_of_2} équipes`} />
+                {selectedSuggestion.best_thirds > 0 && <Row label="Repêchage" value={`${selectedSuggestion.best_thirds} meilleur(s) 3ème(s)`} />}
+              </>}
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={() => setStep(1)} className="dls-btn dls-btn-secondary flex items-center gap-1"><ChevronLeft size={16} /> Retour</button>
+              <button type="button" onClick={() => setStep(1)} className="dls-btn dls-btn-secondary flex items-center gap-1">
+                <ChevronLeft size={16} /> Retour
+              </button>
               <button type="submit" disabled={loading} className="dls-btn dls-btn-primary flex-1 flex items-center justify-center gap-2">
                 {loading ? <span className="dls-spinner dls-spinner-sm" /> : <Check size={16} />}
-                {loading ? 'Creation...' : 'Creer le tournoi'}
+                {loading ? 'Création...' : 'Créer le tournoi'}
               </button>
             </div>
           </div>
