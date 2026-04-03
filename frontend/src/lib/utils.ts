@@ -102,6 +102,8 @@ export function playerStatusClass(status: PlayerStatus): string {
 }
 
 export function divisionLabel(div: number): string {
+  // Mapping basé sur la structure réelle de l'API FTGames
+  // Div=1 → Elite Division I, Div=2 → Elite Division II, etc.
   const map: Record<number, string> = {
     1: 'Élite Division I',
     2: 'Élite Division II',

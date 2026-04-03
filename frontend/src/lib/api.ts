@@ -51,12 +51,29 @@ export interface Player {
   registered_at?: string | null
 }
 
+export interface RecentMatch {
+  timestamp: number
+  heure: string
+  player_score: number
+  opp_score: number
+  opponent_team: string
+  opponent_idx: string
+  motm: string
+  minutes: number
+  gcr: number
+  extra_time: boolean
+  penalties: boolean
+  is_home: boolean
+}
+
 export interface PlayerInfo {
   team_name: string
   division: number
   played: number
   won: number
   lost: number
+  win_rate: number
+  recent_matches: RecentMatch[]
 }
 
 export interface MatchPlayer {
@@ -89,19 +106,43 @@ export interface Match {
   away_player?: MatchPlayer | null
 }
 
+export interface GoalEvent {
+  scorer: string
+  assister: string
+  minute: number
+  type: string
+  type_code: number
+}
+
+export interface CardEvent {
+  Ti: number
+  Ye?: boolean
+  player: string
+}
+
 export interface TrackerSuggestion {
   timestamp: number
   heure: string
   home_score: number
   away_score: number
-  home_scorers: any[]
-  away_scorers: any[]
+  home_scorers: GoalEvent[]
+  away_scorers: GoalEvent[]
   motm: string
   minutes: number
   gcr: number
   opponent_team: string
+  opponent_idx: string
   extra_time: boolean
   penalties: boolean
+  // Stats de jeu
+  user_possession: number
+  opp_possession: number
+  user_shots: number
+  opp_shots: number
+  user_shots_on_target: number
+  opp_shots_on_target: number
+  user_cards: CardEvent[]
+  opp_cards: CardEvent[]
 }
 
 export interface StandingEntry {

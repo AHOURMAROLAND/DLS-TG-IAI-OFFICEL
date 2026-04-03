@@ -17,13 +17,20 @@ router = APIRouter()
 async def verify_player(dll_idx: str):
     """
     Vérifie un identifiant DLL via le tracker FTGames.
-    Le frontend doit toujours passer par cet endpoint (jamais appeler FTGames directement).
+    Retourne les infos du joueur + ses 3 derniers matchs.
+    - 400 si l'idx n'existe pas
+    - 503 si le tracker est indisponible
     """
+    from ..services.tracker_service import get_all_recent_matches
     try:
         data = await fetch_player_data(dll_idx)
-        return parse_player_info(data)
-    except Exception:
-        raise HTTPException(400, "Identifiant DLL invalide ou tracker indisponible")
+        info = parse_player_info(data)
+        recent = get_all_recent_matches(data, limit=3)
+        return {**info, "recent_matches": recent}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except ConnectionError as e:
+        raise HTTPException(503, str(e))
 
 
 @router.post("/register/{slug}")
@@ -56,7 +63,12 @@ async def register_player(
         raise HTTPException(400, "Cet identifiant DLL est déjà inscrit dans ce tournoi")
 
     # Récupérer les données tracker
-    tracker_data = await fetch_player_data(dll_idx)
+    try:
+        tracker_data = await fetch_player_data(dll_idx)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except ConnectionError as e:
+        raise HTTPException(503, str(e))
     info = parse_player_info(tracker_data)
 
     # Gestion du logo en base (pas Cloudinary pour le MVP)
@@ -140,7 +152,12 @@ async def register_creator(
     if existing.scalar_one_or_none():
         raise HTTPException(400, "Cet identifiant DLL est déjà inscrit")
 
-    tracker_data = await fetch_player_data(dll_idx)
+    try:
+        tracker_data = await fetch_player_data(dll_idx)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except ConnectionError as e:
+        raise HTTPException(503, str(e))
     info = parse_player_info(tracker_data)
 
     logo_data = None

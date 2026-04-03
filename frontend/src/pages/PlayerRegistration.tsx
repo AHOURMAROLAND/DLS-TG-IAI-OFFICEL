@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Search, CheckCircle, ArrowLeft, Trophy, Users } from 'lucide-react'
+import { Search, CheckCircle, ArrowLeft, Trophy, Users, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
 import { divisionLabel, divisionClass } from '../lib/utils'
 import { useTournament } from '../hooks/useTournament'
-import type { PlayerInfo } from '../lib/api'
+import type { PlayerInfo, RecentMatch } from '../lib/api'
 
 export default function PlayerRegistration() {
   const navigate = useNavigate()
@@ -27,9 +27,17 @@ export default function PlayerRegistration() {
       const info = await api.verifyPlayer(idx.trim())
       setPlayerInfo(info)
       toast.success('Joueur vérifié !')
-    } catch {
-      toast.error('Identifiant DLS introuvable')
+    } catch (e: any) {
       setPlayerInfo(null)
+      const status = e?.response?.status
+      const detail = e?.response?.data?.detail
+      if (status === 400) {
+        toast.error(detail || 'Identifiant DLS introuvable — vérifie ton idx')
+      } else if (status === 503) {
+        toast.error('Tracker FTGames indisponible — réessaie dans quelques secondes')
+      } else {
+        toast.error('Erreur lors de la vérification')
+      }
     } finally {
       setVerifying(false)
     }
@@ -56,7 +64,6 @@ export default function PlayerRegistration() {
       fd.append('dll_idx', idx.trim())
       if (logo) fd.append('logo', logo)
       const res = await api.registerPlayer(slug, fd)
-      // Stocker le session_token joueur
       localStorage.setItem(`player_session_${slug}`, res.session_token)
       localStorage.setItem(`player_id_${slug}`, res.player_id)
       navigate(`/register/${slug}/pending`)
@@ -77,7 +84,7 @@ export default function PlayerRegistration() {
 
       {/* Tournoi cible */}
       {tournament && (
-        <div className="dls-card p-4 flex items-center gap-3 mb-6">
+        <div className="dls-card p-4 flex items-center gap-3 mb-5">
           {tournament.logo_url
             ? <img src={tournament.logo_url} alt={tournament.name} className="w-10 h-10 rounded-lg object-cover" />
             : <div className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -87,9 +94,7 @@ export default function PlayerRegistration() {
           }
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-white truncate">{tournament.name}</p>
-            <p className="text-xs" style={{ color: '#64748B' }}>
-              {tournament.max_teams} équipes max
-            </p>
+            <p className="text-xs" style={{ color: '#64748B' }}>{tournament.max_teams} équipes max</p>
           </div>
           <span className="dls-badge dls-badge-registration">Inscriptions ouvertes</span>
         </div>
@@ -104,7 +109,7 @@ export default function PlayerRegistration() {
         <div>
           <label className="dls-label">Identifiant DLS (idx) *</label>
           <div className="flex gap-2">
-            <input className="dls-input flex-1 font-mono" placeholder="Ex: k5dfr5xx"
+            <input className="dls-input flex-1 font-mono" placeholder="Ex: tqlxy8"
               value={idx} onChange={e => { setIdx(e.target.value); setPlayerInfo(null) }}
               onKeyDown={e => e.key === 'Enter' && verifyIdx()} />
             <button onClick={verifyIdx} disabled={verifying || !idx.trim()}
@@ -116,31 +121,52 @@ export default function PlayerRegistration() {
 
         {/* Résultat vérification */}
         {playerInfo && (
-          <div className="rounded-xl p-4" style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.3)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <CheckCircle size={16} style={{ color: '#4ADE80' }} />
-              <span className="text-sm font-semibold" style={{ color: '#4ADE80' }}>Joueur vérifié</span>
+          <div className="flex flex-col gap-3">
+            {/* Fiche joueur */}
+            <div className="rounded-xl p-4" style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.3)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle size={16} style={{ color: '#4ADE80' }} />
+                <span className="text-sm font-semibold" style={{ color: '#4ADE80' }}>Joueur vérifié</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs mb-0.5" style={{ color: '#64748B' }}>Équipe DLS</p>
+                  <p className="font-semibold text-white text-sm">{playerInfo.team_name}</p>
+                </div>
+                <div>
+                  <p className="text-xs mb-0.5" style={{ color: '#64748B' }}>Division</p>
+                  <span className={divisionClass(playerInfo.division)}>{divisionLabel(playerInfo.division)}</span>
+                </div>
+                <div>
+                  <p className="text-xs mb-0.5" style={{ color: '#64748B' }}>Stats globales</p>
+                  <p className="text-sm font-medium">
+                    <span style={{ color: '#4ADE80' }}>{playerInfo.won}V</span>
+                    <span style={{ color: '#64748B' }}> · </span>
+                    <span style={{ color: '#F87171' }}>{playerInfo.lost}D</span>
+                    <span style={{ color: '#64748B' }}> · </span>
+                    <span style={{ color: '#94A3B8' }}>{playerInfo.played}J</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs mb-0.5" style={{ color: '#64748B' }}>Win rate</p>
+                  <p className="font-bold text-sm" style={{ color: '#F5A623' }}>{playerInfo.win_rate}%</p>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+
+            {/* 3 derniers matchs */}
+            {playerInfo.recent_matches?.length > 0 && (
               <div>
-                <p style={{ color: '#64748B' }} className="text-xs">Équipe DLS</p>
-                <p className="font-semibold text-white">{playerInfo.team_name}</p>
-              </div>
-              <div>
-                <p style={{ color: '#64748B' }} className="text-xs">Division</p>
-                <span className={divisionClass(playerInfo.division)}>{divisionLabel(playerInfo.division)}</span>
-              </div>
-              <div>
-                <p style={{ color: '#64748B' }} className="text-xs">Stats globales</p>
-                <p className="text-sm">
-                  <span style={{ color: '#4ADE80' }}>{playerInfo.won}V</span>
-                  {' · '}
-                  <span style={{ color: '#F87171' }}>{playerInfo.lost}D</span>
-                  {' · '}
-                  <span style={{ color: '#94A3B8' }}>{playerInfo.played}J</span>
+                <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: '#94A3B8' }}>
+                  <Clock size={12} /> 3 derniers matchs
                 </p>
+                <div className="flex flex-col gap-2">
+                  {playerInfo.recent_matches.map((m, i) => (
+                    <RecentMatchRow key={i} match={m} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -151,7 +177,7 @@ export default function PlayerRegistration() {
             value={pseudo} onChange={e => setPseudo(e.target.value)} />
         </div>
 
-        {/* Logo équipe */}
+        {/* Logo */}
         <div>
           <label className="dls-label">Logo de l'équipe (optionnel)</label>
           <label htmlFor="player-logo" className="cursor-pointer block">
@@ -172,6 +198,46 @@ export default function PlayerRegistration() {
           {submitting ? 'Envoi...' : 'Envoyer ma demande'}
         </button>
       </div>
+    </div>
+  )
+}
+
+function RecentMatchRow({ match: m }: { match: RecentMatch }) {
+  const win = m.player_score > m.opp_score
+  const draw = m.player_score === m.opp_score
+  const result = win ? 'V' : draw ? 'N' : 'D'
+  const resultColor = win ? '#4ADE80' : draw ? '#94A3B8' : '#F87171'
+  const resultBg = win ? 'rgba(22,163,74,0.15)' : draw ? 'rgba(148,163,184,0.1)' : 'rgba(168,11,28,0.15)'
+
+  return (
+    <div className="rounded-lg p-3 flex items-center gap-3"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(91,29,176,0.15)' }}>
+      {/* Résultat */}
+      <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+        style={{ background: resultBg, color: resultColor }}>
+        {result}
+      </span>
+
+      {/* Score + adversaire */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-sm text-white">
+            {m.player_score} – {m.opp_score}
+          </span>
+          {m.extra_time && (
+            <span className="text-xs" style={{ color: '#F5A623' }}>AET</span>
+          )}
+          {m.penalties && (
+            <span className="text-xs" style={{ color: '#A78BFA' }}>PK</span>
+          )}
+        </div>
+        <p className="text-xs truncate" style={{ color: '#64748B' }}>
+          vs {m.opponent_team} · {m.minutes}'
+        </p>
+      </div>
+
+      {/* Date */}
+      <span className="text-xs flex-shrink-0" style={{ color: '#64748B' }}>{m.heure}</span>
     </div>
   )
 }
