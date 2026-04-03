@@ -206,8 +206,8 @@ export default function CreateTournament() {
             )}
             {type === 'groups' && (
               <div>
-                <label className="dls-label flex items-center gap-1.5">Configuration des poules <Info size={12} style={{ color: '#64748B' }} /></label>
-                {loadingSuggestions ? (
+                <label className="dls-label flex items-center gap-1.5">Configuration des poules </label>
+                {_loadingSuggestions ? (
                   <div className="flex justify-center py-4"><span className="dls-spinner dls-spinner-sm" /></div>
                 ) : groupSuggestions.length === 0 ? (
                   <p className="text-xs" style={{ color: '#F87171' }}>Aucune configuration valide</p>
