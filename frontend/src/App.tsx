@@ -8,6 +8,7 @@ import './index.css'
 
 // ── Lazy loading — chaque page se charge à la demande ──────────────────────
 const Home                  = lazy(() => import('./pages/Home'))
+const TournamentsList       = lazy(() => import('./pages/TournamentsList'))
 const CreateTournament      = lazy(() => import('./pages/CreateTournament'))
 const JoinTournament        = lazy(() => import('./pages/JoinTournament'))
 const PlayerRegistration    = lazy(() => import('./pages/PlayerRegistration'))
@@ -175,8 +176,9 @@ export default function App() {
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* GROUPE A */}
-                <Route path="/"           element={<Home />} />
-                <Route path="/create"     element={<CreateTournament />} />
+                <Route path="/"            element={<Home />} />
+                <Route path="/tournaments" element={<TournamentsList />} />
+                <Route path="/create"      element={<CreateTournament />} />
                 <Route path="/join"       element={<JoinTournament />} />
                 <Route path="/join/:slug" element={<JoinTournament />} />
 

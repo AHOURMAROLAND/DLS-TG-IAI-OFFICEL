@@ -25,8 +25,8 @@ const Header: React.FC = () => {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
-            <Link to="/" className="dls-btn dls-btn-ghost dls-btn-sm"
-              style={{ color: isActive('/') ? '#fff' : '#94A3B8', fontWeight: isActive('/') ? 600 : 400 }}>
+            <Link to="/tournaments" className="dls-btn dls-btn-ghost dls-btn-sm"
+              style={{ color: isActive('/tournaments') ? '#fff' : '#94A3B8', fontWeight: isActive('/tournaments') ? 600 : 400 }}>
               Tournois
             </Link>
             <Link to="/create" className="dls-btn dls-btn-ghost dls-btn-sm"
@@ -59,7 +59,7 @@ const Header: React.FC = () => {
       {open && (
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0F1020' }}>
           <div className="dls-container py-3 flex flex-col gap-1">
-            <Link to="/" onClick={() => setOpen(false)}
+            <Link to="/tournaments" onClick={() => setOpen(false)}
               className="dls-btn dls-btn-ghost text-left justify-start" style={{ color: '#94A3B8' }}>
               🏆 Tournois
             </Link>
