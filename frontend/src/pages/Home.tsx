@@ -1,10 +1,22 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings } from 'lucide-react'
+import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, UserCheck } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, getCreatorSession, isCreatorOf } from '../lib/utils'
 import type { Tournament } from '../lib/api'
 import { SkeletonMatchList } from '../components/ui/Skeleton'
+
+/** Récupère tous les slugs de tournois où l'utilisateur est inscrit comme joueur */
+function getJoinedSlugs(): string[] {
+  const slugs: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('player_session_')) {
+      slugs.push(key.replace('player_session_', ''))
+    }
+  }
+  return slugs
+}
 
 export default function Home() {
   const navigate = useNavigate()
@@ -12,12 +24,22 @@ export default function Home() {
   const { data: tournaments = [], isLoading } = useTournaments()
 
   const creatorSession = getCreatorSession()
+  const joinedSlugs = useMemo(() => getJoinedSlugs(), [])
 
-  // Séparer mes tournois (créateur) des autres
+  // Mes tournois créés
   const myTournaments = creatorSession
     ? tournaments.filter(t => t.creator_session === creatorSession)
     : []
-  const otherTournaments = tournaments.filter(t => t.creator_session !== creatorSession)
+
+  // Tournois où je suis inscrit (pas créateur)
+  const joinedTournaments = tournaments.filter(t =>
+    joinedSlugs.includes(t.slug) && t.creator_session !== creatorSession
+  )
+
+  // Tous les autres
+  const otherTournaments = tournaments.filter(t =>
+    t.creator_session !== creatorSession && !joinedSlugs.includes(t.slug)
+  )
 
   const handleJoin = () => {
     const slug = code.trim()
@@ -28,7 +50,8 @@ export default function Home() {
     if (isCreatorOf(t.creator_session)) {
       navigate(`/dashboard/${t.slug}`)
     } else {
-      navigate(`/join/${t.slug}`)
+      // Joueur inscrit → aller directement aux vues du tournoi
+      navigate(`/tournament/${t.slug}/bracket`)
     }
   }
 
@@ -79,7 +102,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Mes tournois (créateur connecté) ── */}
+      {/* ── Mes tournois créés ── */}
       {myTournaments.length > 0 && (
         <section className="max-w-3xl mx-auto mb-8">
           <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
@@ -89,12 +112,23 @@ export default function Home() {
           </h2>
           <div className="flex flex-col gap-3">
             {myTournaments.map(t => (
-              <TournamentRow
-                key={t.id}
-                tournament={t}
-                isOwner
-                onClick={() => handleTournamentClick(t)}
-              />
+              <TournamentRow key={t.id} tournament={t} role="owner" onClick={() => handleTournamentClick(t)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Tournois où je suis inscrit ── */}
+      {joinedTournaments.length > 0 && (
+        <section className="max-w-3xl mx-auto mb-8">
+          <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+            <UserCheck size={16} style={{ color: '#4ADE80' }} />
+            Mes inscriptions
+            <span className="dls-badge dls-badge-green">{joinedTournaments.length}</span>
+          </h2>
+          <div className="flex flex-col gap-3">
+            {joinedTournaments.map(t => (
+              <TournamentRow key={t.id} tournament={t} role="player" onClick={() => handleTournamentClick(t)} />
             ))}
           </div>
         </section>
@@ -127,7 +161,7 @@ export default function Home() {
 
         {isLoading ? (
           <SkeletonMatchList count={3} />
-        ) : otherTournaments.length === 0 && myTournaments.length === 0 ? (
+        ) : otherTournaments.length === 0 && myTournaments.length === 0 && joinedTournaments.length === 0 ? (
           <div className="dls-card p-10 text-center">
             <Trophy size={40} style={{ color: '#334155', margin: '0 auto 12px' }} />
             <p className="text-white font-medium mb-1">Aucun tournoi pour l'instant</p>
@@ -140,12 +174,7 @@ export default function Home() {
         ) : (
           <div className="flex flex-col gap-3">
             {otherTournaments.map(t => (
-              <TournamentRow
-                key={t.id}
-                tournament={t}
-                isOwner={false}
-                onClick={() => handleTournamentClick(t)}
-              />
+              <TournamentRow key={t.id} tournament={t} role="visitor" onClick={() => handleTournamentClick(t)} />
             ))}
           </div>
         )}
@@ -156,34 +185,40 @@ export default function Home() {
 
 function TournamentRow({
   tournament: t,
-  isOwner,
+  role,
   onClick,
 }: {
   tournament: Tournament
-  isOwner: boolean
+  role: 'owner' | 'player' | 'visitor'
   onClick: () => void
 }) {
+  const borderColor = role === 'owner' ? 'rgba(245,166,35,0.3)'
+    : role === 'player' ? 'rgba(22,163,74,0.3)'
+    : undefined
+
+  const iconBg = role === 'owner' ? 'rgba(245,166,35,0.12)'
+    : role === 'player' ? 'rgba(22,163,74,0.12)'
+    : 'rgba(17,85,204,0.15)'
+
+  const iconColor = role === 'owner' ? '#F5A623'
+    : role === 'player' ? '#4ADE80'
+    : '#4D8EFF'
+
   return (
-    <div
-      onClick={onClick}
-      className="dls-card p-4 flex items-center gap-4 cursor-pointer transition-all"
-      style={{
-        borderColor: isOwner ? 'rgba(245,166,35,0.3)' : undefined,
-      }}
-    >
+    <div onClick={onClick} className="dls-card p-4 flex items-center gap-4 cursor-pointer transition-all"
+      style={{ borderColor }}>
       {t.logo_url
         ? <img src={t.logo_url} alt={t.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
         : <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: isOwner ? 'rgba(245,166,35,0.12)' : 'rgba(17,85,204,0.15)' }}>
-            <Trophy size={20} style={{ color: isOwner ? '#F5A623' : '#4D8EFF' }} />
+            style={{ background: iconBg }}>
+            <Trophy size={20} style={{ color: iconColor }} />
           </div>
       }
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-semibold text-white truncate">{t.name}</p>
-          {isOwner && (
-            <span className="dls-badge dls-badge-gold flex-shrink-0">Créateur</span>
-          )}
+          {role === 'owner' && <span className="dls-badge dls-badge-gold flex-shrink-0">Créateur</span>}
+          {role === 'player' && <span className="dls-badge dls-badge-green flex-shrink-0">Inscrit</span>}
         </div>
         <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
           {tournamentTypeLabel(t.tournament_type)} · {t.max_teams} équipes
@@ -193,9 +228,7 @@ function TournamentRow({
         <span className={tournamentStatusClass(t.status)}>
           {tournamentStatusLabel(t.status)}
         </span>
-        {isOwner && (
-          <Settings size={14} style={{ color: '#64748B' }} />
-        )}
+        {role === 'owner' && <Settings size={14} style={{ color: '#64748B' }} />}
       </div>
     </div>
   )
