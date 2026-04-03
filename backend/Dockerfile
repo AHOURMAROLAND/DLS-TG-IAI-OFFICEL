@@ -2,26 +2,21 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Installation des dépendances système
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Copie des dépendances Python
+# Dépendances Python
 COPY requirements.txt .
-
-# Installation des dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copie du code source
+# Code source
 COPY . .
 
-# Création du dossier de logs
+# Créer le dossier logs
 RUN mkdir -p logs
 
-# Exposition du port
 EXPOSE 8000
 
-# Commande de démarrage
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Migrations + démarrage
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000

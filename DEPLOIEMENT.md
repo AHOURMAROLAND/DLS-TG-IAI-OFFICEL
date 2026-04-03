@@ -16,55 +16,45 @@
 
 ---
 
-## 2. Déploiement Backend — Railway
+## 2. Déploiement Backend — Render
 
-### 2.1 Créer le projet Railway
+### 2.1 Créer le Web Service
 
-1. Aller sur [railway.app](https://railway.app) → **New Project**
-2. Choisir **Deploy from GitHub repo** → sélectionner `DLS-TG-IAI-OFFICEL`
-3. Sélectionner le dossier `backend` comme **Root Directory**
+1. Aller sur [render.com](https://render.com) → **New** → **Web Service**
+2. Connecter le repo GitHub `DLS-TG-IAI-OFFICEL`
+3. Configurer :
+   - **Name** : `dls-hub-backend`
+   - **Root Directory** : `backend`
+   - **Runtime** : `Docker` (utilise le `Dockerfile`)
+   - **Instance Type** : Free (ou Starter pour la prod)
 
 ### 2.2 Ajouter PostgreSQL
 
-Dans Railway → **New Service** → **Database** → **PostgreSQL**
+1. Render → **New** → **PostgreSQL**
+2. **Name** : `dls-hub-db`
+3. Copier l'**Internal Database URL** (format `postgresql://...`)
 
-Railway génère automatiquement `DATABASE_URL` — copier la valeur.
+### 2.3 Variables d'environnement Render
 
-### 2.3 Variables d'environnement Railway
-
-Dans le service backend → **Variables** → ajouter :
+Dans le Web Service → **Environment** → ajouter :
 
 ```
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
-SECRET_KEY=<générer avec: python -c "import secrets; print(secrets.token_urlsafe(64))">
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST/DBNAME
+SECRET_KEY=<générer : python -c "import secrets; print(secrets.token_urlsafe(64))">
 ENVIRONMENT=production
 DEBUG=false
 TRACKER_API_URL=https://st.cf.api.ftpub.net/StatsTracker_Frontline
 TRACKER_TIMEOUT=15
 TRACKER_RETRY_ATTEMPTS=3
 LOG_LEVEL=INFO
-BACKEND_CORS_ORIGINS=["https://votre-domaine.vercel.app"]
+BACKEND_CORS_ORIGINS=["https://dls-hub.vercel.app"]
 ```
 
-### 2.4 Fichier de démarrage Railway
+> ⚠️ L'URL PostgreSQL Render est en `postgresql://` — remplacer par `postgresql+asyncpg://` pour asyncpg.
 
-Créer `backend/Procfile` :
-```
-web: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
+### 2.4 URL du backend
 
-Ou utiliser le `Dockerfile` existant.
-
-### 2.5 Migration base de données
-
-Après le premier déploiement, dans Railway → **Shell** :
-```bash
-alembic upgrade head
-```
-
-### 2.6 URL du backend
-
-Railway fournit une URL du type : `https://dls-hub-backend.up.railway.app`
+Render fournit une URL du type : `https://dls-hub-backend.onrender.com`
 
 ---
 
