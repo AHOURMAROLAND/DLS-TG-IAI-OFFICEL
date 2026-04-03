@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Search, Trophy, Users, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Search, Trophy, Users, ArrowLeft, CheckCircle, Settings } from 'lucide-react'
 import api from '../lib/api'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, isCreatorOf } from '../lib/utils'
 import type { Tournament } from '../lib/api'
 
 export default function JoinTournament() {
@@ -109,6 +109,12 @@ export default function JoinTournament() {
             className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
             <Users size={16} /> Rejoindre ce tournoi
           </button>
+          {isCreatorOf(tournament.creator_session) && (
+            <button onClick={() => navigate(`/dashboard/${tournament.slug}`)}
+              className="dls-btn dls-btn-secondary dls-btn-full flex items-center justify-center gap-2 mt-2">
+              <Settings size={16} /> Gérer ce tournoi (créateur)
+            </button>
+          )}
         </div>
       )}
     </div>

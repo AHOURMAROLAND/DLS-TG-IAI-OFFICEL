@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Settings, UserCheck, Users, Plus, Search } from 'lucide-react'
+import { Trophy, Settings, UserCheck, Plus, Search } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, isCreatorOf } from '../lib/utils'
 import type { Tournament } from '../lib/api'
@@ -31,9 +31,8 @@ export default function TournamentsList() {
     .filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()))
 
   const handleClick = (t: Tournament) => {
-    if (isCreatorOf(t.creator_session)) navigate(`/dashboard/${t.slug}`)
-    else if (joinedSlugs.includes(t.slug)) navigate(`/tournament/${t.slug}/bracket`)
-    else navigate(`/join/${t.slug}`)
+    // Toujours passer par /join/:slug — TournamentDetail redirigera vers le bon endroit
+    navigate(`/join/${t.slug}`)
   }
 
   const TABS: { key: Tab; label: string; count: number; color: string }[] = [
