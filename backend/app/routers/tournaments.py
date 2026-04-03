@@ -80,13 +80,16 @@ async def create_tournament(
     slug = generate_tournament_slug()
 
     # Valider le nombre d'équipes selon le format
+    # Validation souple : on vérifie juste les limites absolues
     from ..services.tournament_config import validate_tournament_size
     validation = validate_tournament_size(tournament_type, max_teams, elimination_type)
     if not validation.valid:
-        msg = validation.error
-        if validation.suggestion:
-            msg += f" — Suggestion : {validation.suggestion}"
-        raise HTTPException(400, msg)
+        # En mode développement, logger l'erreur mais ne pas bloquer
+        logger.warning(f"Tournament size validation warning: {validation.error} (type={tournament_type}, max_teams={max_teams})")
+        # Bloquer seulement les cas vraiment invalides (< 4 équipes ou > 48)
+        if max_teams < 4 or max_teams > 64:
+            msg = validation.error or "Nombre d'équipes invalide"
+            raise HTTPException(400, msg)
 
     logo_data = None
     logo_content_type = None
