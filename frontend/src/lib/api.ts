@@ -296,6 +296,14 @@ class ApiClient {
   }
 
   async createTournament(form: FormData): Promise<Tournament> {
+    // Si pas de logo, envoyer en JSON (plus fiable via proxy Vercel)
+    const logo = form.get('logo') as File | null
+    if (!logo) {
+      const data: Record<string, any> = {}
+      form.forEach((v, k) => { if (k !== 'logo') data[k] = v })
+      const r = await this.http.post('/tournaments/', data)
+      return r.data
+    }
     const r = await this.http.post('/tournaments/', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
