@@ -4,7 +4,7 @@ from uuid import UUID
 
 class PlayerRegister(BaseModel):
     pseudo: str = Field(..., min_length=2, max_length=50)
-    dll_idx: str = Field(..., min_length=4, max_length=20)
+    dll_idx: str = Field(..., min_length=8, max_length=20)
     session_token: str
 
 class PlayerVerify(BaseModel):

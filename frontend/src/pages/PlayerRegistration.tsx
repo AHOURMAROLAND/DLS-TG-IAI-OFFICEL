@@ -31,7 +31,7 @@ export default function PlayerRegistration() {
 
   // Debounce 800ms sur le champ idx
   useEffect(() => {
-    if (!idx.trim() || idx.length < 4) { setPlayerInfo(null); return }
+    if (!idx.trim() || idx.length < 8) { setPlayerInfo(null); return }
     const timer = setTimeout(() => verifyIdx(), 800)
     return () => clearTimeout(timer)
   }, [idx])
@@ -123,15 +123,18 @@ export default function PlayerRegistration() {
         <div>
           <label className="dls-label">Identifiant DLS (idx) *</label>
           <div className="flex gap-2">
-            <input className="dls-input flex-1 font-mono" placeholder="Ex: tqlxy8"
+            <input className="dls-input flex-1 font-mono" placeholder="Ex: xxxxxxxx"
               value={idx} onChange={e => { setIdx(e.target.value); setPlayerInfo(null) }}
               onKeyDown={e => e.key === 'Enter' && verifyIdx()} />
-            <button onClick={verifyIdx} disabled={verifying || !idx.trim()}
+            <button onClick={verifyIdx} disabled={verifying || idx.trim().length < 8}
               className="dls-btn dls-btn-primary" title="Vérifier">
               {verifying ? <span className="dls-spinner dls-spinner-sm" /> : <Search size={16} />}
             </button>
           </div>
-          {idx.length >= 4 && !playerInfo && !verifying && (
+          {idx.length > 0 && idx.length < 8 && (
+            <p className="text-xs mt-1" style={{ color: '#F87171' }}>L'idx doit contenir au moins 8 caractères</p>
+          )}
+          {idx.length >= 8 && !playerInfo && !verifying && (
             <p className="text-xs mt-1" style={{ color: '#64748B' }}>Vérification automatique en cours…</p>
           )}
         </div>
