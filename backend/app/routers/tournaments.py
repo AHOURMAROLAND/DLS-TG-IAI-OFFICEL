@@ -55,6 +55,49 @@ async def get_group_suggestions(max_teams: int):
     }
 
 
+from pydantic import BaseModel as PydanticModel
+
+class TournamentCreateJSON(PydanticModel):
+    name: str
+    tournament_type: str
+    elimination_type: str = "single"
+    championship_legs: str = "single"
+    max_teams: int
+    group_count: int = 0
+    teams_per_group: int = 0
+    qualified_per_group: int = 2
+    elimination_round: str = ""
+
+
+@router.post("/json")
+async def create_tournament_json(
+    body: TournamentCreateJSON,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_auth),
+):
+    """Crée un tournoi sans logo — accepte JSON."""
+    slug = generate_tournament_slug()
+    from ..services.tournament_config import validate_tournament_size
+    validation = validate_tournament_size(body.tournament_type, body.max_teams, body.elimination_type)
+    if not validation.valid:
+        if body.max_teams < 4 or body.max_teams > 64:
+            raise HTTPException(400, validation.error or "Nombre d'équipes invalide")
+
+    tournament = Tournament(
+        slug=slug, name=body.name, logo_data=None, logo_content_type=None,
+        tournament_type=body.tournament_type, elimination_type=body.elimination_type,
+        championship_legs=body.championship_legs, max_teams=body.max_teams,
+        group_count=body.group_count, teams_per_group=body.teams_per_group,
+        qualified_per_group=body.qualified_per_group, elimination_round=body.elimination_round,
+        creator_id=current_user.id, status=TournamentStatus.REGISTRATION,
+    )
+    db.add(tournament)
+    await db.commit()
+    await db.refresh(tournament)
+    logger.info(f"Tournoi créé par {current_user.pseudo}: {tournament.name} ({tournament.slug})")
+    return TournamentOut.from_db(tournament)
+
+
 @router.post("/")
 async def create_tournament(
     name: str = Form(...),
