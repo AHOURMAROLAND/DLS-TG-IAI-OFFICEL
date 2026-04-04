@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react'
-import { Copy, Check } from 'lucide-react'
-import { useState } from 'react'
+import { Copy, Check, Download } from 'lucide-react'
+import { useState, useRef } from 'react'
 import { copyToClipboard } from '../../lib/utils'
 import toast from 'react-hot-toast'
 
@@ -13,6 +13,7 @@ interface QRCodeCardProps {
 export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: QRCodeCardProps) {
   const [copied, setCopied] = useState(false)
   const [flashing, setFlashing] = useState(false)
+  const qrRef = useRef<HTMLDivElement>(null)
 
   const copy = async () => {
     await copyToClipboard(url)
@@ -22,12 +23,44 @@ export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: 
     setTimeout(() => { setCopied(false); setFlashing(false) }, 2000)
   }
 
+  const download = () => {
+    const svg = qrRef.current?.querySelector('svg')
+    if (!svg) return
+
+    const size = 300
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Fond blanc
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, size, size)
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    const img = new Image()
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, size, size)
+      URL.revokeObjectURL(svgUrl)
+      const link = document.createElement('a')
+      link.download = `qr-${slug}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+      toast.success('QR Code téléchargé !')
+    }
+    img.src = svgUrl
+  }
+
   return (
     <div className="dls-card p-5 flex flex-col items-center gap-4">
       <p className="text-xs font-semibold" style={{ color: '#94A3B8' }}>{label}</p>
 
       {/* QR Code */}
-      <div className="rounded-xl p-3" style={{ background: '#fff' }}>
+      <div ref={qrRef} className="rounded-xl p-3" style={{ background: '#fff' }}>
         <QRCodeSVG
           value={url}
           size={140}
@@ -57,6 +90,12 @@ export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: 
           Scanne ou partage ce code
         </p>
       </div>
+
+      {/* Bouton télécharger */}
+      <button onClick={download}
+        className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 w-full justify-center">
+        <Download size={13} /> Télécharger le QR Code
+      </button>
     </div>
   )
 }
