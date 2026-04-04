@@ -34,8 +34,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function CreateTournament() {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
-  if (!isAuthenticated) { navigate('/login'); return null }
+  const { isAuthenticated, loading: authLoading } = useAuth()
   const [step, setStep] = useState(0)
   const [logo, setLogo] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -44,6 +43,10 @@ export default function CreateTournament() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<GroupSuggestion | null>(null)
   const [_loadingSuggestions, setLoadingSuggestions] = useState(false)
 
+  // Attendre que l'auth soit chargée avant de rediriger
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) navigate('/login')
+  }, [authLoading, isAuthenticated, navigate])
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -74,6 +77,14 @@ export default function CreateTournament() {
   }, [type, maxTeams])
 
   useEffect(() => { setValue('max_teams', 8) }, [type])
+
+  // Afficher un spinner pendant le chargement de l'auth
+  if (authLoading) return (
+    <div className="dls-page flex items-center justify-center">
+      <span className="dls-spinner dls-spinner-lg" />
+    </div>
+  )
+  if (!isAuthenticated) return null
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -123,7 +134,6 @@ export default function CreateTournament() {
       </div>
       <form onSubmit={handleSubmit(onSubmit)}>
 
-
         {step === 0 && (
           <div className="dls-card p-6 flex flex-col gap-5">
             <div className="flex items-center gap-2">
@@ -163,7 +173,6 @@ export default function CreateTournament() {
             </button>
           </div>
         )}
-
 
         {step === 1 && (
           <div className="dls-card p-6 flex flex-col gap-5">
@@ -207,7 +216,7 @@ export default function CreateTournament() {
             )}
             {type === 'groups' && (
               <div>
-                <label className="dls-label flex items-center gap-1.5">Configuration des poules </label>
+                <label className="dls-label">Configuration des poules</label>
                 {_loadingSuggestions ? (
                   <div className="flex justify-center py-4"><span className="dls-spinner dls-spinner-sm" /></div>
                 ) : groupSuggestions.length === 0 ? (
@@ -236,7 +245,6 @@ export default function CreateTournament() {
             </div>
           </div>
         )}
-
 
         {step === 2 && (
           <div className="dls-card p-6 flex flex-col gap-5">
