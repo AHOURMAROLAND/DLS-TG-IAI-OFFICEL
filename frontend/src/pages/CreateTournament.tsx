@@ -6,9 +6,9 @@ import { z } from 'zod'
 import { Trophy, Upload, ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
-import { saveCreatorSession } from '../lib/utils'
 import type { GroupSuggestion } from '../lib/api'
 import TournamentPreview from '../components/ui/TournamentPreview'
+import { useAuth } from '../contexts/AuthContext'
 
 const schema = z.object({
   name: z.string().min(3, 'Minimum 3 caractères').max(100),
@@ -34,6 +34,8 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function CreateTournament() {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
+  if (!isAuthenticated) { navigate('/login'); return null }
   const [step, setStep] = useState(0)
   const [logo, setLogo] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -97,7 +99,6 @@ export default function CreateTournament() {
       Object.entries(data).forEach(([k, v]) => v !== undefined && fd.append(k, String(v)))
       if (logo) fd.append('logo', logo)
       const t = await api.createTournament(fd)
-      saveCreatorSession(t.creator_session, t.slug)
       toast.success('Tournoi créé !')
       navigate(`/dashboard/${t.slug}`)
     } catch (e: any) {

@@ -1,8 +1,8 @@
-"""create tables tournaments players matches
+"""initial_with_auth
 
-Revision ID: e30f62179756
-Revises: 9d0b10830b9d
-Create Date: 2026-03-30 22:09:48.300309
+Revision ID: 3381562170a4
+Revises: 
+Create Date: 2026-04-04 00:36:51.850511
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'e30f62179756'
-down_revision = '9d0b10830b9d'
+revision = '3381562170a4'
+down_revision = None
 branch_labels = None
 depends_on = None
 

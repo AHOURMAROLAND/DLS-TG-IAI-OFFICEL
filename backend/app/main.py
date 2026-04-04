@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import asyncio
 
-from .routers import tournaments, players, matches, tracker
+from .routers import tournaments, players, matches, tracker, auth
 from .websocket.manager import manager
 from .middleware.security import setup_security_middleware, limiter
 from .utils.exceptions import (
@@ -92,6 +92,7 @@ app.include_router(tournaments.router, prefix="/api/tournaments", tags=["Tournoi
 app.include_router(players.router, prefix="/api/players", tags=["Joueurs"])
 app.include_router(matches.router, prefix="/api/matches", tags=["Matchs"])
 app.include_router(tracker.router, prefix="/api/tracker", tags=["Tracker DLS"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 
 
 @app.websocket("/ws/{tournament_id}")

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers, useMatches } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, getCreatorSession, getCreatorSessionForSlug, formatRelative } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, getCreatorSession, formatRelative } from '../lib/utils'
 import api from '../lib/api'
 
 interface ActivityItem {
@@ -213,6 +213,25 @@ export default function CreatorDashboard() {
             {copied ? 'Copié' : 'Copier'}
           </button>
         </div>
+        {/* Token créateur — pour récupérer l'accès sur un autre appareil */}
+        <details className="mt-3">
+          <summary className="text-xs cursor-pointer" style={{ color: '#64748B' }}>
+            🔑 Token créateur (pour récupérer l'accès)
+          </summary>
+          <div className="mt-2 flex items-center gap-2">
+            <code className="flex-1 text-xs font-mono rounded-lg px-2 py-1.5 truncate"
+              style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(91,29,176,0.2)', fontSize: '0.65rem' }}>
+              {t.creator_session}
+            </code>
+            <button onClick={() => { copyToClipboard(t.creator_session); toast.success('Token copié !') }}
+              className="dls-btn dls-btn-ghost dls-btn-sm flex-shrink-0">
+              <Copy size={12} />
+            </button>
+          </div>
+          <p className="text-xs mt-1" style={{ color: '#64748B' }}>
+            Garde ce token précieusement — il te permet de retrouver ce tournoi depuis n'importe quel appareil.
+          </p>
+        </details>
       </div>
 
       {/* Actions rapides */}

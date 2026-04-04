@@ -4,11 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import Header from './components/layout/Header'
 import LottiePlayer from './components/ui/LottiePlayer'
+import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 
 // ── Lazy loading — chaque page se charge à la demande ──────────────────────
 const Home                  = lazy(() => import('./pages/Home'))
 const TournamentsList       = lazy(() => import('./pages/TournamentsList'))
+const Login                 = lazy(() => import('./pages/Login'))
+const Register              = lazy(() => import('./pages/Register'))
 const CreateTournament      = lazy(() => import('./pages/CreateTournament'))
 const JoinTournament        = lazy(() => import('./pages/JoinTournament'))
 const PlayerRegistration    = lazy(() => import('./pages/PlayerRegistration'))
@@ -169,6 +172,7 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <AuthProvider>
       <Router>
         <div className="min-h-screen" style={{ backgroundColor: '#07080F' }}>
           <Header />
@@ -178,6 +182,8 @@ export default function App() {
                 {/* GROUPE A */}
                 <Route path="/"            element={<Home />} />
                 <Route path="/tournaments" element={<TournamentsList />} />
+                <Route path="/login"       element={<Login />} />
+                <Route path="/register"    element={<Register />} />
                 <Route path="/create"      element={<CreateTournament />} />
                 <Route path="/join"       element={<JoinTournament />} />
                 <Route path="/join/:slug" element={<JoinTournament />} />
@@ -269,6 +275,7 @@ export default function App() {
           }}
         />
       </Router>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }

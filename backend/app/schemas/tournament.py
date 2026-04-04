@@ -21,23 +21,10 @@ class ChampionshipLegs(str, Enum):
     DOUBLE = "double"
 
 
-class TournamentCreate(BaseModel):
-    name: str = Field(..., min_length=3, max_length=100)
-    tournament_type: TournamentType
-    elimination_type: EliminationType = EliminationType.SINGLE
-    championship_legs: ChampionshipLegs = ChampionshipLegs.SINGLE
-    max_teams: int = Field(..., ge=4, le=64)
-    group_count: int = Field(0, ge=0, le=16)
-    teams_per_group: int = Field(0, ge=0)
-    qualified_per_group: int = Field(2, ge=1)
-    elimination_round: str = ""
-
-
 class TournamentOut(BaseModel):
-    id: UUID
+    id: str
     slug: str
     name: str
-    # Data-URL base64 pour affichage direct, ou None
     logo_url: Optional[str] = None
     tournament_type: TournamentType
     elimination_type: EliminationType
@@ -48,15 +35,13 @@ class TournamentOut(BaseModel):
     qualified_per_group: int
     elimination_round: str
     status: str
-    # Retourné au créateur uniquement — le frontend doit le stocker en cookie
-    creator_session: str
+    creator_id: str  # ID de l'utilisateur créateur (pas de token exposé)
 
     class Config:
         from_attributes = True
 
     @classmethod
     def from_db(cls, tournament) -> "TournamentOut":
-        """Convertit le modèle SQLAlchemy en schéma de sortie."""
         logo_url = None
         if tournament.logo_data and tournament.logo_content_type:
             b64 = b64encode(tournament.logo_data).decode("utf-8")
@@ -66,7 +51,7 @@ class TournamentOut(BaseModel):
             return v.value if hasattr(v, "value") else (v or "")
 
         return cls(
-            id=tournament.id,
+            id=str(tournament.id),
             slug=tournament.slug,
             name=tournament.name,
             logo_url=logo_url,
@@ -79,5 +64,5 @@ class TournamentOut(BaseModel):
             qualified_per_group=tournament.qualified_per_group or 2,
             elimination_round=tournament.elimination_round or "",
             status=_val(tournament.status),
-            creator_session=tournament.creator_session,
+            creator_id=str(tournament.creator_id),
         )

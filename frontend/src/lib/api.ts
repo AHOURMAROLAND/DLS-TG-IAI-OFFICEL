@@ -43,7 +43,12 @@ export interface Tournament {
   qualified_per_group: number
   elimination_round: string
   status: TournamentStatus
-  creator_session: string
+  creator_id: string  // ID utilisateur (plus de creator_session)
+}
+
+export interface AuthUser {
+  id: string
+  pseudo: string
 }
 
 export interface Player {
@@ -212,16 +217,49 @@ class ApiClient {
     )
   }
 
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  async register(pseudo: string, password: string) {
+    const r = await this.http.post('/auth/register', { pseudo, password })
+    return r.data as AuthUser & { token: string }
+  }
+
+  async login(pseudo: string, password: string) {
+    const r = await this.http.post('/auth/login', { pseudo, password })
+    return r.data as AuthUser & { token: string }
+  }
+
+  async logout() {
+    await this.http.post('/auth/logout')
+  }
+
+  async getMe(): Promise<AuthUser | null> {
+    try {
+      const r = await this.http.get('/auth/me')
+      return r.data as AuthUser
+    } catch {
+      return null
+    }
+  }
+
+  async checkPseudo(pseudo: string): Promise<{ available: boolean; suggestions: string[] }> {
+    const r = await this.http.get(`/auth/check-pseudo/${pseudo}`)
+    return r.data
+  }
+
+  // ── Mes tournois ─────────────────────────────────────────────────────────
+  async getMyTournaments(): Promise<Tournament[]> {
+    const r = await this.http.get('/tournaments/mine')
+    return r.data
+  }
+
+  async getParticipatingTournaments(): Promise<Tournament[]> {
+    const r = await this.http.get('/tournaments/participating')
+    return r.data
+  }
+
   // ── Session ──────────────────────────────────────────────────────────────
   async verifySession() {
-    const r = await this.http.get('/session/verify')
-    return r.data as {
-      valid: boolean
-      expires_at: string | null
-      tournament_slug?: string
-      tournament_name?: string
-      reason?: string
-    }
+    return this.getMe()
   }
 
   // ── Tournois ─────────────────────────────────────────────────────────────
@@ -266,10 +304,8 @@ class ApiClient {
     return r.data
   }
 
-  async deleteTournament(slug: string, creatorSession: string): Promise<void> {
-    await this.http.delete(`/tournaments/${slug}`, {
-      params: { creator_session: creatorSession },
-    })
+  async deleteTournament(slug: string): Promise<void> {
+    await this.http.delete(`/tournaments/${slug}`)
   }
 
   async generateDraw(slug: string, creatorSession: string) {
