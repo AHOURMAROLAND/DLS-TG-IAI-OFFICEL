@@ -120,7 +120,7 @@ export default function StatisticsView() {
 
 // ── Tableau buteurs/passeurs ──────────────────────────────────────────────────
 
-function ScorersTable({ data, label, color }: { data: any[]; label: string; color: string }) {
+function ScorersTable({ data, color }: { data: any[]; label?: string; color: string }) {
   if (data.length === 0) return (
     <div className="dls-card p-10 text-center">
       <p className="text-sm" style={{ color: '#64748B' }}>Aucune donnée disponible</p>

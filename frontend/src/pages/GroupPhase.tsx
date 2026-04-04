@@ -43,7 +43,6 @@ export default function GroupPhase() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
             {groups.map(g => {
               const isActive = (activeGroup ?? groups[0]?.group_id) === g.group_id
-              const top = g.players.slice(0, qualifiedPer)
               return (
                 <button key={g.group_id} onClick={() => setActiveGroup(g.group_id)}
                   className="text-left rounded-xl p-3 transition-all"
