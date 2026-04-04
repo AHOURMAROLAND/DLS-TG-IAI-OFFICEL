@@ -20,8 +20,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Vérifier la session au chargement
   useEffect(() => {
+    // Restaurer le token depuis localStorage immédiatement
+    const savedToken = localStorage.getItem(TOKEN_KEY)
+    if (savedToken) {
+      api.setToken(savedToken)
+      // Décoder le token JWT localement pour restaurer l'user sans appel réseau
+      try {
+        const payload = JSON.parse(atob(savedToken.split('.')[1]))
+        const exp = payload.exp * 1000
+        if (exp > Date.now()) {
+          // Token encore valide — restaurer l'user immédiatement
+          setUser({ id: payload.sub, pseudo: payload.pseudo })
+          setLoading(false)
+          // Vérifier en arrière-plan (sans bloquer l'UI)
+          api.getMe().then(u => { if (u) setUser(u) }).catch(() => {})
+          return
+        }
+      } catch {
+        // Token malformé — continuer avec la vérification normale
+      }
+    }
+
     api.getMe()
-      .then(u => setUser(u))
+      .then(u => { if (u) setUser(u) })
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

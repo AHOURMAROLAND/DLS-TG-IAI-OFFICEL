@@ -206,7 +206,7 @@ class ApiClient {
 
     this.http = axios.create({
       baseURL,
-      timeout: 15_000,
+      timeout: 60_000, // 60s pour gérer le cold start Render
       withCredentials: true,
     })
 
@@ -259,7 +259,8 @@ class ApiClient {
     try {
       const r = await this.http.get('/auth/me')
       return r.data as AuthUser
-    } catch {
+    } catch (e: any) {
+      // 401 = pas connecté (normal), autres erreurs = réseau/cold start
       return null
     }
   }
