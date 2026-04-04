@@ -76,9 +76,9 @@ def setup_security_middleware(app) -> None:
     if settings.is_production:
         app.add_middleware(
             TrustedHostMiddleware,
-            allowed_hosts=["localhost", "127.0.0.1", "*.railway.app", "*.onrender.com", "*.vercel.app"],
+            allowed_hosts=["localhost", "127.0.0.1", "*.onrender.com", "*.vercel.app"],
         )
-        app.add_middleware(HTTPSRedirectMiddleware)
+        # HTTPSRedirectMiddleware désactivé — Render gère le HTTPS en amont (reverse proxy)
 
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
