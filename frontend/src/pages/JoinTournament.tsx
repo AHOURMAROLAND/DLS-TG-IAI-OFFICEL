@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Search, Trophy, Users, ArrowLeft, CheckCircle, Settings } from 'lucide-react'
+import { Search, Trophy, Users, ArrowLeft, CheckCircle, Settings, QrCode } from 'lucide-react'
 import api from '../lib/api'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import type { Tournament } from '../lib/api'
+import QRScanner from '../components/ui/QRScanner'
 
 export default function JoinTournament() {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ export default function JoinTournament() {
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
+  const [showScanner, setShowScanner] = useState(false)
 
   useEffect(() => {
     if (paramSlug) verify(paramSlug)
@@ -47,6 +49,16 @@ export default function JoinTournament() {
 
   return (
     <div className="dls-page max-w-md mx-auto">
+      {showScanner && (
+        <QRScanner
+          onScan={(slug) => {
+            setShowScanner(false)
+            setCode(slug.slice(0, 8))
+            verify(slug)
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
       <button onClick={() => navigate('/')}
         className="dls-btn dls-btn-ghost dls-btn-sm flex items-center gap-1.5 mb-6"
         style={{ color: '#94A3B8' }}>
@@ -69,6 +81,10 @@ export default function JoinTournament() {
           <button onClick={() => verify(code)} disabled={checking || code.length < 4}
             className="dls-btn dls-btn-primary">
             {checking ? <span className="dls-spinner dls-spinner-sm" /> : <Search size={16} />}
+          </button>
+          <button onClick={() => setShowScanner(true)}
+            className="dls-btn dls-btn-secondary" title="Scanner un QR Code">
+            <QrCode size={16} />
           </button>
         </div>
         {error && <p className="text-xs mt-2" style={{ color: '#F87171' }}>{error}</p>}
