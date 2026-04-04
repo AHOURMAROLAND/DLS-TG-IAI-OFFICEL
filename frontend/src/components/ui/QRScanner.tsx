@@ -25,21 +25,27 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 220, height: 220 } },
           (decodedText: string) => {
-            // Extraire le slug depuis l'URL ou utiliser directement
-            let slug = decodedText
+            // Extraire le slug depuis l'URL scannée
+            let slug = decodedText.trim()
             try {
               const url = new URL(decodedText)
-              // URL type /join/SLUG ou /register/SLUG
-              const parts = url.pathname.split('/')
+              const parts = url.pathname.split('/').filter(Boolean)
+              // Chercher le slug après /join/ ou /register/
               const joinIdx = parts.findIndex(p => p === 'join' || p === 'register')
               if (joinIdx !== -1 && parts[joinIdx + 1]) {
-                slug = parts[joinIdx + 1].toUpperCase()
+                slug = parts[joinIdx + 1]
+              } else if (parts.length > 0) {
+                // Prendre le dernier segment
+                slug = parts[parts.length - 1]
               }
             } catch {
-              // Pas une URL — utiliser tel quel
-              slug = decodedText.toUpperCase().trim()
+              // Pas une URL — utiliser tel quel (code brut)
             }
-            onScan(slug)
+            // Nettoyer et mettre en majuscules
+            slug = slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+            if (slug.length >= 4) {
+              onScan(slug)
+            }
           },
           () => {} // erreur de scan silencieuse
         )

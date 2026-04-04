@@ -1,6 +1,5 @@
-import { QRCodeSVG } from 'qrcode.react'
+import { useEffect, useRef, useState } from 'react'
 import { Copy, Check, Download, Share } from 'lucide-react'
-import { useState, useRef } from 'react'
 import { copyToClipboard } from '../../lib/utils'
 import toast from 'react-hot-toast'
 
@@ -10,10 +9,23 @@ interface QRCodeCardProps {
   label?: string
 }
 
-export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: QRCodeCardProps) {
+export default function QRCodeCard({ url, slug, label = "Lien d'invitation" }: QRCodeCardProps) {
   const [copied, setCopied] = useState(false)
   const [flashing, setFlashing] = useState(false)
-  const qrRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // Générer le QR code directement sur un canvas via qrcode lib
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    import('qrcode').then(QRCode => {
+      QRCode.toCanvas(canvas, url, {
+        width: 200,
+        margin: 2,
+        color: { dark: '#07080F', light: '#ffffff' },
+      })
+    })
+  }, [url])
 
   const copy = async () => {
     await copyToClipboard(url)
@@ -23,71 +35,61 @@ export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: 
     setTimeout(() => { setCopied(false); setFlashing(false) }, 2000)
   }
 
+  const download = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    // Canvas déjà rendu — télécharger directement
+    const link = document.createElement('a')
+    link.download = `qr-tournoi-${slug.toUpperCase()}.png`
+    link.href = canvas.toDataURL('image/png')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('QR Code téléchargé !')
+  }
+
   const share = async () => {
-    // Web Share API (natif mobile) avec fallback copie
+    // Essayer Web Share API avec fichier image
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: `Rejoins le tournoi ${slug.toUpperCase()}`,
-          text: `Utilise ce lien pour rejoindre le tournoi DLS Hub`,
-          url,
-        })
-        return
+        const canvas = canvasRef.current
+        if (canvas) {
+          canvas.toBlob(async (blob) => {
+            if (!blob) return
+            const file = new File([blob], `qr-${slug}.png`, { type: 'image/png' })
+            if (navigator.canShare?.({ files: [file] })) {
+              await navigator.share({
+                title: `Tournoi ${slug.toUpperCase()} — DLS Hub`,
+                text: `Rejoins mon tournoi DLS Hub avec ce lien : ${url}`,
+                files: [file],
+              })
+              return
+            }
+            // Partager sans fichier
+            await navigator.share({
+              title: `Tournoi ${slug.toUpperCase()} — DLS Hub`,
+              text: `Rejoins mon tournoi DLS Hub`,
+              url,
+            })
+          })
+          return
+        }
       } catch {
-        // Annulé par l'utilisateur
-        return
+        // Annulé ou non supporté
       }
     }
     // Fallback : copier le lien
     await copyToClipboard(url)
-    toast.success('Lien copié !')
-  }
-
-  const download = () => {
-    const svg = qrRef.current?.querySelector('svg')
-    if (!svg) return
-
-    const size = 300
-    const canvas = document.createElement('canvas')
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // Fond blanc
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, size, size)
-
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const svgUrl = URL.createObjectURL(svgBlob)
-
-    const img = new Image()
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, size, size)
-      URL.revokeObjectURL(svgUrl)
-      const link = document.createElement('a')
-      link.download = `qr-${slug}.png`
-      link.href = canvas.toDataURL('image/png')
-      link.click()
-      toast.success('QR Code téléchargé !')
-    }
-    img.src = svgUrl
+    toast.success('Lien copié dans le presse-papier !')
   }
 
   return (
     <div className="dls-card p-5 flex flex-col items-center gap-4">
       <p className="text-xs font-semibold" style={{ color: '#94A3B8' }}>{label}</p>
 
-      {/* QR Code */}
-      <div ref={qrRef} className="rounded-xl p-3" style={{ background: '#fff' }}>
-        <QRCodeSVG
-          value={url}
-          size={140}
-          bgColor="#ffffff"
-          fgColor="#07080F"
-          level="M"
-        />
+      {/* QR Code sur canvas */}
+      <div className="rounded-xl p-3" style={{ background: '#fff' }}>
+        <canvas ref={canvasRef} style={{ display: 'block', borderRadius: 8 }} />
       </div>
 
       {/* Slug + copier */}
@@ -111,7 +113,7 @@ export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: 
         </p>
       </div>
 
-      {/* Boutons actions */}
+      {/* Boutons */}
       <div className="flex gap-2 w-full">
         <button onClick={download}
           className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 flex-1 justify-center">
