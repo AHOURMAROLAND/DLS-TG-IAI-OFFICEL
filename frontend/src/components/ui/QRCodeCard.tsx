@@ -1,5 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react'
-import { Copy, Check, Download } from 'lucide-react'
+import { Copy, Check, Download, Share } from 'lucide-react'
 import { useState, useRef } from 'react'
 import { copyToClipboard } from '../../lib/utils'
 import toast from 'react-hot-toast'
@@ -21,6 +21,26 @@ export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: 
     setFlashing(true)
     toast.success('Lien copié !')
     setTimeout(() => { setCopied(false); setFlashing(false) }, 2000)
+  }
+
+  const share = async () => {
+    // Web Share API (natif mobile) avec fallback copie
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Rejoins le tournoi ${slug.toUpperCase()}`,
+          text: `Utilise ce lien pour rejoindre le tournoi DLS Hub`,
+          url,
+        })
+        return
+      } catch {
+        // Annulé par l'utilisateur
+        return
+      }
+    }
+    // Fallback : copier le lien
+    await copyToClipboard(url)
+    toast.success('Lien copié !')
   }
 
   const download = () => {
@@ -91,11 +111,17 @@ export default function QRCodeCard({ url, slug, label = 'Lien d\'invitation' }: 
         </p>
       </div>
 
-      {/* Bouton télécharger */}
-      <button onClick={download}
-        className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 w-full justify-center">
-        <Download size={13} /> Télécharger le QR Code
-      </button>
+      {/* Boutons actions */}
+      <div className="flex gap-2 w-full">
+        <button onClick={download}
+          className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 flex-1 justify-center">
+          <Download size={13} /> Télécharger
+        </button>
+        <button onClick={share}
+          className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5 flex-1 justify-center">
+          <Share size={13} /> Partager
+        </button>
+      </div>
     </div>
   )
 }
