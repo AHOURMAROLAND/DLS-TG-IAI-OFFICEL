@@ -10,6 +10,7 @@ from ..services.auth_service import (
     hash_password, verify_password, validate_password,
     create_access_token, get_current_user, suggest_pseudos,
 )
+from ..config import settings
 from ..utils.logger import logger
 
 router = APIRouter()
@@ -74,7 +75,7 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
         max_age=COOKIE_MAX_AGE,
         httponly=True,
         samesite="lax",
-        secure=False,  # True en production HTTPS
+        secure=settings.is_production,
     )
 
     logger.info(f"Nouveau compte créé : {user.pseudo}")
@@ -116,7 +117,7 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
         max_age=COOKIE_MAX_AGE,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=settings.is_production,
     )
 
     logger.info(f"Connexion : {user.pseudo}")

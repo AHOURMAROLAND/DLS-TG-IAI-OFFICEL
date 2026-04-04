@@ -1,45 +1,27 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, UserCheck } from 'lucide-react'
+import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, getCreatorSession, isCreatorOf } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
+import { useAuth } from '../contexts/AuthContext'
 import type { Tournament } from '../lib/api'
 import { SkeletonMatchList } from '../components/ui/Skeleton'
-
-/** Récupère tous les slugs de tournois où l'utilisateur est inscrit comme joueur */
-function getJoinedSlugs(): string[] {
-  const slugs: string[] = []
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key?.startsWith('player_session_')) {
-      slugs.push(key.replace('player_session_', ''))
-    }
-  }
-  return slugs
-}
 
 export default function Home() {
   const navigate = useNavigate()
   const [code, setCode] = useState('')
   const { data: tournaments = [], isLoading } = useTournaments()
+  const { user } = useAuth()
 
-  const creatorSession = getCreatorSession()
-  const joinedSlugs = useMemo(() => getJoinedSlugs(), [])
-
-  // Mes tournois créés
-  const myTournaments = creatorSession
-    ? tournaments.filter(t => t.creator_session === creatorSession)
+  // Mes tournois créés (creator_id === user.id)
+  const myTournaments = user
+    ? tournaments.filter(t => t.creator_id === user.id)
     : []
 
-  // Tournois où je suis inscrit (pas créateur)
-  const joinedTournaments = tournaments.filter(t =>
-    joinedSlugs.includes(t.slug) && t.creator_session !== creatorSession
-  )
-
   // Tous les autres
-  const otherTournaments = tournaments.filter(t =>
-    t.creator_session !== creatorSession && !joinedSlugs.includes(t.slug)
-  )
+  const otherTournaments = user
+    ? tournaments.filter(t => t.creator_id !== user.id)
+    : tournaments
 
   const handleJoin = () => {
     const slug = code.trim()
@@ -47,10 +29,9 @@ export default function Home() {
   }
 
   const handleTournamentClick = (t: Tournament) => {
-    if (isCreatorOf(t.creator_session)) {
+    if (user && t.creator_id === user.id) {
       navigate(`/dashboard/${t.slug}`)
     } else {
-      // Joueur inscrit → aller directement aux vues du tournoi
       navigate(`/tournament/${t.slug}/bracket`)
     }
   }
@@ -118,22 +99,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── Tournois où je suis inscrit ── */}
-      {joinedTournaments.length > 0 && (
-        <section className="max-w-3xl mx-auto mb-8">
-          <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
-            <UserCheck size={16} style={{ color: '#4ADE80' }} />
-            Mes inscriptions
-            <span className="dls-badge dls-badge-green">{joinedTournaments.length}</span>
-          </h2>
-          <div className="flex flex-col gap-3">
-            {joinedTournaments.map(t => (
-              <TournamentRow key={t.id} tournament={t} role="player" onClick={() => handleTournamentClick(t)} />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* ── Features ── */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-3xl mx-auto">
         {[
@@ -161,7 +126,7 @@ export default function Home() {
 
         {isLoading ? (
           <SkeletonMatchList count={3} />
-        ) : otherTournaments.length === 0 && myTournaments.length === 0 && joinedTournaments.length === 0 ? (
+        ) : otherTournaments.length === 0 && myTournaments.length === 0 ? (
           <div className="dls-card p-10 text-center">
             <Trophy size={40} style={{ color: '#334155', margin: '0 auto 12px' }} />
             <p className="text-white font-medium mb-1">Aucun tournoi pour l'instant</p>

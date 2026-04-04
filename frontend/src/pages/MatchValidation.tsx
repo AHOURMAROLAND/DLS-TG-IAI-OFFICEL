@@ -4,7 +4,7 @@ import { ArrowLeft, Edit3, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lu
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMatches } from '../hooks/useTournament'
-import { getCreatorSession, matchPhaseLabel, matchAllowsExtraTime } from '../lib/utils'
+import { matchPhaseLabel, matchAllowsExtraTime } from '../lib/utils'
 import api from '../lib/api'
 import type { Match, TrackerSuggestion, GoalEvent, CardEvent } from '../lib/api'
 import LottiePlayer from '../components/ui/LottiePlayer'
@@ -14,7 +14,6 @@ export default function MatchValidation() {
   const { slug, matchId } = useParams<{ slug: string; matchId?: string }>()
   const qc = useQueryClient()
   const { data: matches = [] } = useMatches(slug)
-  const session = getCreatorSession()
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [suggestions, setSuggestions] = useState<TrackerSuggestion[]>([])
@@ -33,24 +32,22 @@ export default function MatchValidation() {
   }, [matches, matchId])
 
   const loadSuggestions = async (mid: string) => {
-    if (!session) return
     setLoading(true)
     try {
-      const res = await api.getTrackerSuggestions(mid, session)
+      const res = await api.getTrackerSuggestions(mid)
       setSuggestions(res.suggestions)
     } catch { setSuggestions([]) }
     finally { setLoading(false) }
   }
 
   const validate = async () => {
-    if (!selectedMatch || !session) return
+    if (!selectedMatch) return
     const isManual = !selected && (manualHome !== '' || manualAway !== '')
     if (!selected && !isManual) { toast.error('Sélectionnez un match ou entrez un score manuel'); return }
     setValidating(true)
     try {
       await api.validateMatch({
         match_id: selectedMatch.id,
-        creator_session: session,
         home_score: selected ? selected.home_score : parseInt(manualHome),
         away_score: selected ? selected.away_score : parseInt(manualAway),
         home_scorers: selected?.home_scorers ?? [],

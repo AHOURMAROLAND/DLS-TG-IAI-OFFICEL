@@ -4,7 +4,7 @@ import { Users, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePlayers, useTournament } from '../hooks/useTournament'
-import { divisionLabel, divisionClass, getCreatorSession } from '../lib/utils'
+import { divisionLabel, divisionClass } from '../lib/utils'
 import api from '../lib/api'
 import type { PlayerStatus } from '../lib/api'
 import { SkeletonMatchList } from '../components/ui/Skeleton'
@@ -20,13 +20,10 @@ export default function ManageRegistrations() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [acting, setActing] = useState<string | null>(null)
 
-  const session = getCreatorSession()
-
   const decide = async (playerId: string, decision: 'accept' | 'reject') => {
-    if (!session) { toast.error('Session expirée'); return }
     setActing(playerId)
     try {
-      await api.playerDecision(playerId, decision, session)
+      await api.playerDecision(playerId, decision)
       toast.success(decision === 'accept' ? 'Joueur accepté' : 'Joueur refusé')
       qc.invalidateQueries({ queryKey: ['players', slug] })
     } catch {

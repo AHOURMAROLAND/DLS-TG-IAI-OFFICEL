@@ -199,7 +199,7 @@ class ApiClient {
     this.http = axios.create({
       baseURL: import.meta.env.VITE_API_URL ?? '/api',
       timeout: 15_000,
-      withCredentials: true, // envoie les cookies (creator_session)
+      withCredentials: true, // envoie les cookies JWT
     })
 
     this.http.interceptors.response.use(
@@ -308,18 +308,13 @@ class ApiClient {
     await this.http.delete(`/tournaments/${slug}`)
   }
 
-  async generateDraw(slug: string, creatorSession: string) {
-    const r = await this.http.post(`/tournaments/${slug}/draw`, {
-      creator_session: creatorSession,
-    })
+  async generateDraw(slug: string) {
+    const r = await this.http.post(`/tournaments/${slug}/draw`, {})
     return r.data as { draw: any; status: string; tournament_type: TournamentType }
   }
 
-  async confirmDraw(slug: string, creatorSession: string, draw: any) {
-    const r = await this.http.post(`/tournaments/${slug}/draw/confirm`, {
-      creator_session: creatorSession,
-      draw,
-    })
+  async confirmDraw(slug: string, draw: any) {
+    const r = await this.http.post(`/tournaments/${slug}/draw/confirm`, { draw })
     return r.data
   }
 
@@ -363,11 +358,10 @@ class ApiClient {
     return r.data
   }
 
-  async playerDecision(playerId: string, decision: 'accept' | 'reject', creatorSession: string) {
+  async playerDecision(playerId: string, decision: 'accept' | 'reject') {
     const r = await this.http.post('/players/decision', {
       player_id: playerId,
       decision,
-      creator_session: creatorSession,
     })
     return r.data
   }
@@ -378,10 +372,8 @@ class ApiClient {
     return r.data
   }
 
-  async getTrackerSuggestions(matchId: string, creatorSession: string) {
-    const r = await this.http.get(`/matches/${matchId}/tracker-suggest`, {
-      params: { creator_session: creatorSession },
-    })
+  async getTrackerSuggestions(matchId: string) {
+    const r = await this.http.get(`/matches/${matchId}/tracker-suggest`)
     return r.data as {
       match_id: string
       home_player: MatchPlayer
@@ -394,7 +386,6 @@ class ApiClient {
 
   async validateMatch(payload: {
     match_id: string
-    creator_session: string
     home_score: number
     away_score: number
     home_scorers?: any[]

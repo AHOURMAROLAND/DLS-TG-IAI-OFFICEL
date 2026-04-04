@@ -1,46 +1,44 @@
-# DLS Hub — Guide de déploiement
+﻿# DLS Hub - Guide de deploiement
 
-**Stack de production :**
-- Backend : Railway (FastAPI + PostgreSQL)
+Stack de production :
+- Backend : Render (FastAPI + PostgreSQL)
 - Frontend : Vercel (React PWA)
-- Domaine : configurable
 
----
+## 1. Prerequis
 
-## 1. Prérequis
-
-- Compte [Railway](https://railway.app)
-- Compte [Vercel](https://vercel.com)
-- Compte [GitHub](https://github.com) avec le repo pushé
+- Compte Render (https://render.com)
+- Compte Vercel (https://vercel.com)
+- Compte GitHub avec le repo pousse
 - Node.js 18+ et Python 3.11+ en local
 
----
+## 2. Deploiement Backend - Render
 
-## 2. Déploiement Backend — Render
+### 2.1 Creer la base de donnees PostgreSQL
 
-### 2.1 Créer le Web Service
+1. Render -> New -> PostgreSQL
+2. Name : dls-hub-db
+3. Region : Frankfurt (EU) ou Oregon (US)
+4. Plan : Free
+5. Copier l'Internal Database URL (format postgresql://user:pass@host/db)
 
-1. Aller sur [render.com](https://render.com) → **New** → **Web Service**
-2. Connecter le repo GitHub `DLS-TG-IAI-OFFICEL`
+### 2.2 Creer le Web Service
+
+1. Render -> New -> Web Service
+2. Connecter le repo GitHub
 3. Configurer :
-   - **Name** : `dls-hub-backend`
-   - **Root Directory** : `backend`
-   - **Runtime** : `Docker` (utilise le `Dockerfile`)
-   - **Instance Type** : Free (ou Starter pour la prod)
-
-### 2.2 Ajouter PostgreSQL
-
-1. Render → **New** → **PostgreSQL**
-2. **Name** : `dls-hub-db`
-3. Copier l'**Internal Database URL** (format `postgresql://...`)
+   - Name : dls-hub-backend
+   - Region : meme region que la DB
+   - Root Directory : backend
+   - Runtime : Docker
+   - Instance Type : Free
+4. Cliquer Create Web Service
 
 ### 2.3 Variables d'environnement Render
 
-Dans le Web Service → **Environment** → ajouter :
+Dans le Web Service -> Environment -> ajouter :
 
-```
 DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST/DBNAME
-SECRET_KEY=<générer : python -c "import secrets; print(secrets.token_urlsafe(64))">
+SECRET_KEY=<generer avec : python -c "import secrets; print(secrets.token_urlsafe(64))">
 ENVIRONMENT=production
 DEBUG=false
 TRACKER_API_URL=https://st.cf.api.ftpub.net/StatsTracker_Frontline
@@ -48,254 +46,106 @@ TRACKER_TIMEOUT=15
 TRACKER_RETRY_ATTEMPTS=3
 LOG_LEVEL=INFO
 BACKEND_CORS_ORIGINS=["https://dls-hub.vercel.app"]
-```
 
-> ⚠️ L'URL PostgreSQL Render est en `postgresql://` — remplacer par `postgresql+asyncpg://` pour asyncpg.
+IMPORTANT : L'URL PostgreSQL Render est en postgresql:// - remplacer par postgresql+asyncpg://
+IMPORTANT : BACKEND_CORS_ORIGINS doit contenir l'URL exacte de ton frontend Vercel (sans slash final)
 
 ### 2.4 URL du backend
 
-Render fournit une URL du type : `https://dls-hub-backend.onrender.com`
+Render fournit une URL du type : https://dls-hub-backend.onrender.com
+Copier cette URL pour configurer Vercel.
 
----
+### 2.5 Migrations automatiques
 
-## 3. Déploiement Frontend — Vercel
+Les migrations s'executent automatiquement au demarrage via le Dockerfile :
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port PORT
 
-### 3.1 Importer le projet
+## 3. Deploiement Frontend - Vercel
 
-1. Aller sur [vercel.com](https://vercel.com) → **New Project**
-2. Importer depuis GitHub → `DLS-TG-IAI-OFFICEL`
-3. **Root Directory** : `frontend`
-4. **Framework Preset** : Vite
-5. **Build Command** : `npm run build`
-6. **Output Directory** : `dist`
+### 3.1 Mettre a jour vercel.json
 
-### 3.2 Variables d'environnement Vercel
+Dans frontend/vercel.json, remplacer dls-hub-backend.onrender.com par l'URL reelle de ton service Render.
 
-Dans le projet Vercel → **Settings** → **Environment Variables** :
+### 3.2 Importer le projet sur Vercel
 
-```
-VITE_API_URL=https://dls-hub-backend.up.railway.app/api
-```
+1. vercel.com -> New Project
+2. Importer depuis GitHub
+3. Root Directory : frontend
+4. Framework Preset : Vite
+5. Build Command : npm run build
+6. Output Directory : dist
 
-### 3.3 Fichier de configuration Vercel
+### 3.3 Variables d'environnement Vercel
 
-Créer `frontend/vercel.json` pour le routing SPA :
+VITE_API_URL=https://dls-hub-backend.onrender.com/api
 
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
+## 4. Variables d'environnement - Recap
 
-### 3.4 Proxy WebSocket
+Backend (Render) :
+- DATABASE_URL : URL PostgreSQL Render (avec +asyncpg) - OBLIGATOIRE
+- SECRET_KEY : Token aleatoire 64 chars - OBLIGATOIRE
+- ENVIRONMENT : production - OBLIGATOIRE
+- DEBUG : false - OBLIGATOIRE
+- BACKEND_CORS_ORIGINS : URL Vercel en JSON - OBLIGATOIRE
+- TRACKER_API_URL : URL FTGames - OBLIGATOIRE
+- TRACKER_TIMEOUT : 15 - OBLIGATOIRE
+- LOG_LEVEL : INFO - OBLIGATOIRE
 
-Ajouter dans `frontend/vercel.json` :
+Frontend (Vercel) :
+- VITE_API_URL : URL Render + /api
 
-```json
-{
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "https://dls-hub-backend.up.railway.app/api/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
+## 5. Securite production
 
----
+- Cookies JWT : httponly + samesite=lax + secure=True (automatique si ENVIRONMENT=production)
+- CORS : uniquement l'URL Vercel exacte dans BACKEND_CORS_ORIGINS
+- Trusted Hosts : *.onrender.com, *.vercel.app, localhost
 
-## 4. Migration SQLite → PostgreSQL
+## 6. Commandes utiles
 
-Le backend utilise SQLite en développement. En production Railway, PostgreSQL est utilisé automatiquement via `DATABASE_URL`.
+Lancer le backend en dev :
+  cd backend
+  venv\Scripts\activate
+  alembic upgrade head
+  uvicorn app.main:app --reload --port 8000
 
-**Changer le driver dans `.env` production :**
-```
-DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
-```
+Lancer le frontend en dev :
+  cd frontend
+  npm install
+  npm run dev
 
-**Installer le driver asyncpg :**
-```bash
-pip install asyncpg
-```
+Build production frontend :
+  cd frontend
+  npm run build
 
-Ajouter dans `requirements.txt` :
-```
-asyncpg==0.29.0
-```
+Generer une SECRET_KEY :
+  python -c "import secrets; print(secrets.token_urlsafe(64))"
 
----
+## 7. Architecture de production
 
-## 5. Variables d'environnement — Récapitulatif
-
-### Backend (`.env` production)
-
-| Variable | Valeur | Obligatoire |
-|---|---|---|
-| `DATABASE_URL` | URL PostgreSQL Railway | ✅ |
-| `SECRET_KEY` | Token aléatoire 64 chars | ✅ |
-| `ENVIRONMENT` | `production` | ✅ |
-| `DEBUG` | `false` | ✅ |
-| `BACKEND_CORS_ORIGINS` | URL Vercel en JSON | ✅ |
-| `TRACKER_API_URL` | URL FTGames | ✅ |
-| `TRACKER_TIMEOUT` | `15` | ✅ |
-| `LOG_LEVEL` | `INFO` | ✅ |
-
-### Frontend (Vercel)
-
-| Variable | Valeur |
-|---|---|
-| `VITE_API_URL` | URL Railway + `/api` |
-
----
-
-## 6. Checklist avant mise en production
-
-- [ ] `SECRET_KEY` changée (ne pas utiliser la valeur par défaut)
-- [ ] `DEBUG=false` en production
-- [ ] `BACKEND_CORS_ORIGINS` contient l'URL Vercel exacte
-- [ ] Migration Alembic exécutée (`alembic upgrade head`)
-- [ ] `asyncpg` dans `requirements.txt` ✅ (déjà présent)
-- [ ] `vercel.json` créé avec les rewrites ✅
-- [ ] `VITE_API_URL` configurée sur Vercel
-- [ ] Icônes PWA générées ✅ (`pwa-192x192.png`, `pwa-512x512.png`, `apple-touch-icon.png`)
-- [ ] Animations Lottie copiées dans `frontend/public/lottie/` ✅
-
----
-
-## 7. Sécurité production
-
-### Cookies HTTPS
-
-`secure=True` est activé automatiquement quand `ENVIRONMENT=production`. Aucune modification de code nécessaire.
-
-### Headers CORS stricts
-
-En production, `BACKEND_CORS_ORIGINS` doit contenir **uniquement** l'URL Vercel :
-```
-BACKEND_CORS_ORIGINS=["https://dls-hub.vercel.app"]
-```
-
----
-
-## 8. Commandes utiles
-
-### Lancer en développement
-
-```bash
-# Terminal 1 — Backend
-cd backend
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Linux/Mac
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
-
-# Terminal 2 — Frontend
-cd frontend
-npm install
-npm run dev
-```
-
-### Build production frontend
-
-```bash
-cd frontend
-npm run build
-# Le dossier dist/ est prêt pour Vercel
-```
-
-### Tests backend
-
-```bash
-cd backend
-venv\Scripts\activate
-pip install pytest pytest-asyncio
-pytest tests/ -v
-```
-
-### Générer les icônes PWA
-
-```bash
-cd frontend
-npm install sharp --save-dev
-node scripts/generate-pwa-icons.cjs
-```
-
----
-
-## 9. Architecture de production
-
-```
 Utilisateur
-    │
-    ▼
+    |
+    v
 Vercel (React PWA)
-    │  /api/* → proxy
-    ▼
-Railway (FastAPI)
-    │
-    ├── PostgreSQL (Railway)
-    └── WebSocket /ws/*
-```
+    |  /api/* --> proxy vers Render
+    |  /ws/*  --> proxy vers Render
+    v
+Render (FastAPI)
+    |
+    +-- PostgreSQL (Render)
+    +-- WebSocket /ws/*
 
----
+## 8. Checklist avant mise en production
 
-## 10. Monitoring
+[ ] SECRET_KEY generee et configuree sur Render
+[ ] DATABASE_URL avec postgresql+asyncpg:// (pas postgresql://)
+[ ] ENVIRONMENT=production sur Render
+[ ] BACKEND_CORS_ORIGINS contient l'URL Vercel exacte
+[ ] frontend/vercel.json mis a jour avec l'URL Render reelle
+[ ] VITE_API_URL configuree sur Vercel
+[ ] Build frontend sans erreurs (npm run build)
 
-Railway fournit des logs en temps réel dans le dashboard.
+## 9. Mise a jour du deploiement
 
-Pour les logs applicatifs, les fichiers sont dans `backend/logs/` :
-- `dls_hub_YYYYMMDD.log` — tous les logs
-- `errors_YYYYMMDD.log` — erreurs uniquement
-
-En production Railway, les logs sont accessibles via :
-```
-railway logs
-```
-
----
-
-## 11. Checklist déploiement final
-
-### Avant de déployer
-
-```bash
-# 1. Build frontend et vérifier qu'il n'y a pas d'erreurs
-cd frontend
-npm run build
-
-# 2. Vérifier que les icônes PWA sont présentes
-ls public/pwa-192x192.png public/pwa-512x512.png public/apple-touch-icon.png
-
-# 3. Tester le build localement
-npm run preview
-```
-
-### Railway (Backend)
-
-1. Connecter le repo GitHub sur [railway.app](https://railway.app)
-2. Root Directory : `backend`
-3. Ajouter PostgreSQL comme service
-4. Configurer les variables d'environnement (voir section 3)
-5. Copier l'URL Railway générée (ex: `https://dls-hub-xxx.up.railway.app`)
-
-### Vercel (Frontend)
-
-1. Connecter le repo sur [vercel.com](https://vercel.com)
-2. Root Directory : `frontend`
-3. **Mettre à jour `frontend/vercel.json`** avec la vraie URL Railway
-4. Ajouter `VITE_API_URL=https://dls-hub-xxx.up.railway.app/api`
-5. Déployer
-
-### Après déploiement
-
-```bash
-# Exécuter les migrations sur Railway
-railway run alembic upgrade head
-```
-
-### Vérifier la PWA
-
-- Ouvrir l'URL Vercel sur mobile Chrome
-- La bannière "Installer DLS Hub" doit apparaître après quelques secondes
-- Vérifier dans Chrome DevTools → Application → Manifest
-- Vérifier que le Service Worker est actif
+Chaque push sur la branche principale declenche automatiquement :
+- Render : rebuild et redeploiement du backend
+- Vercel : rebuild et redeploiement du frontend

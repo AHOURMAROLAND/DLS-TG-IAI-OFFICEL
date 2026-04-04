@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Search, Trophy, Users, ArrowLeft, CheckCircle, Settings } from 'lucide-react'
 import api from '../lib/api'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, isCreatorOf } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
+import { useAuth } from '../contexts/AuthContext'
 import type { Tournament } from '../lib/api'
 
 export default function JoinTournament() {
   const navigate = useNavigate()
   const { slug: paramSlug } = useParams<{ slug?: string }>()
+  const { user } = useAuth()
   const [code, setCode] = useState(paramSlug?.toUpperCase() ?? '')
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [checking, setChecking] = useState(false)
@@ -109,7 +111,7 @@ export default function JoinTournament() {
             className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
             <Users size={16} /> Rejoindre ce tournoi
           </button>
-          {isCreatorOf(tournament.creator_session) && (
+          {user && tournament.creator_id === user.id && (
             <button onClick={() => navigate(`/dashboard/${tournament.slug}`)}
               className="dls-btn dls-btn-secondary dls-btn-full flex items-center justify-center gap-2 mt-2">
               <Settings size={16} /> Gérer ce tournoi (créateur)

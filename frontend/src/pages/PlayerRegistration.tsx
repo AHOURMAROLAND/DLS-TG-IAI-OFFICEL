@@ -71,9 +71,7 @@ export default function PlayerRegistration() {
       fd.append('dll_idx', idx.trim())
       if (logo) fd.append('logo', logo)
       const res = await api.registerPlayer(slug, fd)
-      localStorage.setItem(`player_session_${slug}`, res.session_token)
-      localStorage.setItem(`player_id_${slug}`, res.player_id)
-      navigate(`/register/${slug}/pending`)
+      navigate(`/register/${slug}/pending?player_id=${res.player_id}`)
     } catch (e: any) {
       toast.error(e?.response?.data?.detail || 'Erreur lors de l\'inscription')
     } finally {

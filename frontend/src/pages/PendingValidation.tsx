@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CheckCircle, RefreshCw } from 'lucide-react'
 import api from '../lib/api'
 import LottiePlayer from '../components/ui/LottiePlayer'
@@ -9,6 +9,7 @@ const POLL_INTERVAL = 10_000 // 10 secondes
 export default function PendingValidation() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
+  const [searchParams] = useSearchParams()
   const [status, setStatus] = useState<'pending' | 'accepted' | 'rejected'>('pending')
   const [dots, setDots] = useState('.')
 
@@ -22,7 +23,8 @@ export default function PendingValidation() {
   useEffect(() => {
     if (!slug) return
 
-    const playerId = localStorage.getItem(`player_id_${slug}`)
+    // player_id passé en query param depuis PlayerRegistration
+    const playerId = searchParams.get('player_id')
     if (!playerId) return
 
     const check = async () => {
@@ -30,7 +32,6 @@ export default function PendingValidation() {
         const player = await api.getPlayer(playerId)
         if (player.status === 'accepted') {
           setStatus('accepted')
-          // Redirection automatique vers les vues du tournoi
           setTimeout(() => navigate(`/tournament/${slug}/bracket`), 2000)
         } else if (player.status === 'rejected') {
           setStatus('rejected')
@@ -43,7 +44,7 @@ export default function PendingValidation() {
     check()
     const interval = setInterval(check, POLL_INTERVAL)
     return () => clearInterval(interval)
-  }, [slug, navigate])
+  }, [slug, navigate, searchParams])
 
   if (status === 'accepted') {
     return (

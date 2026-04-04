@@ -26,7 +26,6 @@ class MatchOut(BaseModel):
 
 class MatchValidate(BaseModel):
     match_id: UUID
-    creator_session: str
     dll_match_timestamp: Optional[str] = None
     home_score: int
     away_score: int
@@ -39,9 +38,8 @@ class MatchValidate(BaseModel):
 
 
 class DrawRequest(BaseModel):
-    creator_session: str
+    pass
 
 
 class DrawConfirmRequest(BaseModel):
-    creator_session: str
     draw: dict

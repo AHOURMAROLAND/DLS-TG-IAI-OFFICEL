@@ -4,7 +4,7 @@ import { Shuffle, RotateCcw, CheckCircle, ArrowLeft, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers } from '../hooks/useTournament'
-import { getCreatorSession, divisionLabel, divisionClass } from '../lib/utils'
+import { divisionLabel, divisionClass } from '../lib/utils'
 import api from '../lib/api'
 import LottiePlayer from '../components/ui/LottiePlayer'
 
@@ -19,14 +19,13 @@ export default function DrawGeneration() {
   const [confirming, setConfirming] = useState(false)
   const [confirmed, setConfirmed] = useState(t?.status === 'in_progress')
 
-  const session = getCreatorSession()
   const accepted = players.filter(p => p.status === 'accepted')
 
   const generate = async () => {
-    if (!session || !slug) return
+    if (!slug) return
     setGenerating(true)
     try {
-      const res = await api.generateDraw(slug, session)
+      const res = await api.generateDraw(slug)
       setDraw(res.draw)
       toast.success('Tirage généré !')
     } catch (e: any) {
@@ -36,11 +35,11 @@ export default function DrawGeneration() {
     }
   }
   const confirm = async () => {
-    if (!draw || !session || !slug) return
+    if (!draw || !slug) return
     if (!window.confirm('Valider ce tirage ? Le tournoi sera lancé.')) return
     setConfirming(true)
     try {
-      await api.confirmDraw(slug, session, draw)
+      await api.confirmDraw(slug, draw)
       setConfirmed(true)
       qc.invalidateQueries({ queryKey: ['tournament', slug] })
       toast.success('Tournoi lancé !')

@@ -30,4 +30,3 @@ class PlayerOut(BaseModel):
 class PlayerDecision(BaseModel):
     player_id: UUID
     decision: str
-    creator_session: str

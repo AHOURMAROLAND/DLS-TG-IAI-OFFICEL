@@ -5,7 +5,8 @@ import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers, useMatches } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, getCreatorSession, formatRelative } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, copyToClipboard, formatRelative } from '../lib/utils'
+import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 
 interface ActivityItem {
@@ -33,7 +34,7 @@ export default function CreatorDashboard() {
   const [creatorLogo, setCreatorLogo] = useState<File | null>(null)
   const [registering, setRegistering] = useState(false)
 
-  const session = getCreatorSession()
+  const { user: _user } = useAuth()
 
   // WebSocket — fil d'activité en temps réel
   const onWs = useCallback((msg: any) => {
@@ -85,7 +86,7 @@ export default function CreatorDashboard() {
   }
 
   const registerAsCreator = async () => {
-    if (!session || !slug) return
+    if (!slug) return
     if (!creatorPseudo.trim() || !creatorIdx.trim()) {
       toast.error('Pseudo et idx DLS requis')
       return
@@ -95,7 +96,6 @@ export default function CreatorDashboard() {
       const fd = new FormData()
       fd.append('pseudo', creatorPseudo.trim())
       fd.append('dll_idx', creatorIdx.trim())
-      fd.append('creator_session', session)
       if (creatorLogo) fd.append('logo', creatorLogo)
       await api.registerCreator(slug, fd)
       toast.success('Inscrit comme joueur !')
@@ -213,25 +213,7 @@ export default function CreatorDashboard() {
             {copied ? 'Copié' : 'Copier'}
           </button>
         </div>
-        {/* Token créateur — pour récupérer l'accès sur un autre appareil */}
-        <details className="mt-3">
-          <summary className="text-xs cursor-pointer" style={{ color: '#64748B' }}>
-            🔑 Token créateur (pour récupérer l'accès)
-          </summary>
-          <div className="mt-2 flex items-center gap-2">
-            <code className="flex-1 text-xs font-mono rounded-lg px-2 py-1.5 truncate"
-              style={{ background: 'rgba(255,255,255,0.04)', color: '#94A3B8', border: '1px solid rgba(91,29,176,0.2)', fontSize: '0.65rem' }}>
-              {t.creator_session}
-            </code>
-            <button onClick={() => { copyToClipboard(t.creator_session); toast.success('Token copié !') }}
-              className="dls-btn dls-btn-ghost dls-btn-sm flex-shrink-0">
-              <Copy size={12} />
-            </button>
-          </div>
-          <p className="text-xs mt-1" style={{ color: '#64748B' }}>
-            Garde ce token précieusement — il te permet de retrouver ce tournoi depuis n'importe quel appareil.
-          </p>
-        </details>
+        {/* Token créateur — supprimé, remplacé par le système d'auth */}
       </div>
 
       {/* Actions rapides */}

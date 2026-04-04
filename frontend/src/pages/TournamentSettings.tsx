@@ -4,7 +4,7 @@ import { ArrowLeft, Save, Trash2, Lock, Share2, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament } from '../hooks/useTournament'
-import { copyToClipboard, getCreatorSession, tournamentTypeLabel } from '../lib/utils'
+import { copyToClipboard, tournamentTypeLabel } from '../lib/utils'
 import api from '../lib/api'
 import QRCodeCard from '../components/ui/QRCodeCard'
 
@@ -25,8 +25,6 @@ export default function TournamentSettings() {
     if (t && !name) setName(t.name)
   }, [t])
 
-  const session = getCreatorSession()
-
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
@@ -38,12 +36,11 @@ export default function TournamentSettings() {
   }
 
   const save = async () => {
-    if (!session || !slug) return
+    if (!slug) return
     if (!name.trim()) { toast.error('Le nom ne peut pas être vide'); return }
     setSaving(true)
     try {
       const fd = new FormData()
-      fd.append('creator_session', session)
       fd.append('name', name.trim())
       if (logo) fd.append('logo', logo)
       await api.updateTournament(slug, fd)
@@ -60,11 +57,11 @@ export default function TournamentSettings() {
   }
 
   const deleteTournament = async () => {
-    if (!session || !slug) return
+    if (!slug) return
     if (!window.confirm(`Supprimer définitivement "${t?.name}" ? Cette action est irréversible.`)) return
     setDeleting(true)
     try {
-      await api.deleteTournament(slug, session)
+      await api.deleteTournament(slug)
       qc.invalidateQueries({ queryKey: ['tournaments'] })
       toast.success('Tournoi supprimé')
       navigate('/')

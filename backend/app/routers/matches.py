@@ -9,6 +9,7 @@ from ..schemas.match import MatchValidate, MatchOut
 from ..services.tracker_service import fetch_player_data, find_recent_matches_vs_opponent
 from ..websocket.manager import manager
 from ..utils.logger import logger
+from ..dependencies import optional_auth, require_auth
 from datetime import datetime
 
 router = APIRouter()
@@ -106,8 +107,8 @@ async def get_matches(slug: str, db: AsyncSession = Depends(get_db)):
 @router.get("/{match_id}/tracker-suggest")
 async def get_tracker_suggestions(
     match_id: str,
-    creator_session: str,
     db: AsyncSession = Depends(get_db),
+    current_user=Depends(optional_auth),
 ):
     """
     Récupère les 3 derniers matchs FTGames entre les 2 joueurs.
@@ -120,7 +121,11 @@ async def get_tracker_suggestions(
 
     t_result = await db.execute(select(Tournament).where(Tournament.id == match.tournament_id))
     t = t_result.scalar_one_or_none()
-    if t.creator_session != creator_session:
+    if not t:
+        raise HTTPException(404, "Tournoi introuvable")
+
+    # Vérifier que l'utilisateur est le créateur du tournoi
+    if current_user is None or str(t.creator_id) != str(current_user.id):
         raise HTTPException(403, "Accès refusé")
 
     home = await db.execute(select(Player).where(Player.id == match.home_player_id))
@@ -155,7 +160,11 @@ async def get_tracker_suggestions(
 
 
 @router.post("/validate")
-async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)):
+async def validate_match(
+    body: MatchValidate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_auth),
+):
     """
     Valide le score d'un match.
     - Applique la règle des 90 min selon la phase
@@ -171,7 +180,7 @@ async def validate_match(body: MatchValidate, db: AsyncSession = Depends(get_db)
 
     t_result = await db.execute(select(Tournament).where(Tournament.id == match.tournament_id))
     t = t_result.scalar_one_or_none()
-    if t.creator_session != body.creator_session:
+    if not t or str(t.creator_id) != str(current_user.id):
         raise HTTPException(403, "Accès refusé")
 
     if match.status in (MatchStatus.VALIDATED, MatchStatus.MANUAL):
