@@ -196,10 +196,16 @@ class ApiClient {
   private http: AxiosInstance
 
   constructor() {
+    // Toujours utiliser le proxy relatif /api pour que les cookies fonctionnent
+    // VITE_API_URL n'est utilisé qu'en développement local
+    const baseURL = import.meta.env.DEV
+      ? (import.meta.env.VITE_API_URL ?? '/api')
+      : '/api'
+
     this.http = axios.create({
-      baseURL: import.meta.env.VITE_API_URL ?? '/api',
+      baseURL,
       timeout: 15_000,
-      withCredentials: true, // envoie les cookies JWT
+      withCredentials: true,
     })
 
     this.http.interceptors.response.use(
