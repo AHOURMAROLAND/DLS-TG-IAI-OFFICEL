@@ -5,12 +5,21 @@ import toast from 'react-hot-toast'
 import api from '../lib/api'
 import { divisionLabel, divisionClass } from '../lib/utils'
 import { useTournament } from '../hooks/useTournament'
+import { useAuth } from '../contexts/AuthContext'
 import type { PlayerInfo, RecentMatch } from '../lib/api'
 
 export default function PlayerRegistration() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
   const { data: tournament } = useTournament(slug)
+  const { isAuthenticated, loading: authLoading } = useAuth()
+
+  // Rediriger vers login si non connecté, en préservant le slug
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate(`/login?redirect=/register/${slug}`)
+    }
+  }, [authLoading, isAuthenticated, navigate, slug])
 
   const [idx, setIdx] = useState('')
   const [pseudo, setPseudo] = useState('')

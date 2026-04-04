@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { UserPlus, Eye, EyeOff, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +19,8 @@ function checkPassword(pwd: string): PwdRule[] {
 
 export default function Register() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') || '/'
   const { register } = useAuth()
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
@@ -49,7 +51,7 @@ export default function Register() {
     try {
       await register(pseudo.trim(), password)
       toast.success(`Compte créé ! Bienvenue ${pseudo} 🎉`)
-      navigate('/')
+      navigate(redirect)
     } catch (e: any) {
       const detail = e?.response?.data
       if (detail?.suggestions) {

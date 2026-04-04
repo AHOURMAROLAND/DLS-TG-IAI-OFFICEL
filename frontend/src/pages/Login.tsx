@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
@@ -7,6 +7,8 @@ import LottiePlayer from '../components/ui/LottiePlayer'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') || '/'
   const { login } = useAuth()
   const [pseudo, setPseudo] = useState('')
   const [password, setPassword] = useState('')
@@ -20,7 +22,7 @@ export default function Login() {
     try {
       await login(pseudo.trim(), password)
       toast.success(`Bienvenue ${pseudo} !`)
-      navigate('/')
+      navigate(redirect)
     } catch (e: any) {
       const status = e?.response?.status
       const detail = e?.response?.data
@@ -82,7 +84,7 @@ export default function Login() {
 
       <p className="text-sm mt-4" style={{ color: '#64748B' }}>
         Pas encore de compte ?{' '}
-        <Link to="/register" style={{ color: '#4D8EFF' }}>Créer un compte</Link>
+        <Link to={`/register${redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`} style={{ color: '#4D8EFF' }}>Créer un compte</Link>
       </p>
     </div>
   )
