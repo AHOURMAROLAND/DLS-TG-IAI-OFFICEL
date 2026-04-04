@@ -198,10 +198,11 @@ class ApiClient {
   private http: AxiosInstance
 
   constructor() {
-    // Toujours utiliser le proxy relatif /api pour que les cookies fonctionnent
+    // En production : appel direct vers Render avec Authorization header (token JWT)
+    // En dev : proxy local via VITE_API_URL ou /api
     const baseURL = import.meta.env.DEV
       ? (import.meta.env.VITE_API_URL ?? '/api')
-      : '/api'
+      : 'https://dls-hub-backend.onrender.com/api'
 
     this.http = axios.create({
       baseURL,

@@ -1,12 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/backend/:path*",
       "destination": "https://dls-hub-backend.onrender.com/api/:path*"
-    },
-    {
-      "source": "/ws/:path*",
-      "destination": "https://dls-hub-backend.onrender.com/ws/:path*"
     },
     {
       "source": "/(.*)",
@@ -19,12 +15,6 @@
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
         { "key": "Service-Worker-Allowed", "value": "/" }
-      ]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" }
       ]
     },
     {
