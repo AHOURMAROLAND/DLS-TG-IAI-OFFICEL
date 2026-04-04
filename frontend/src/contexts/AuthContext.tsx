@@ -12,6 +12,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+const TOKEN_KEY = 'dls_auth_token'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -26,16 +27,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (pseudo: string, password: string) => {
     const data = await api.login(pseudo, password)
+    if (data.token) {
+      localStorage.setItem(TOKEN_KEY, data.token)
+      api.setToken(data.token)
+    }
     setUser({ id: data.id, pseudo: data.pseudo })
   }
 
   const register = async (pseudo: string, password: string) => {
     const data = await api.register(pseudo, password)
+    if (data.token) {
+      localStorage.setItem(TOKEN_KEY, data.token)
+      api.setToken(data.token)
+    }
     setUser({ id: data.id, pseudo: data.pseudo })
   }
 
   const logout = async () => {
     await api.logout()
+    localStorage.removeItem(TOKEN_KEY)
+    api.setToken(null)
     setUser(null)
   }
 

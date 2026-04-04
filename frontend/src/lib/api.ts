@@ -192,12 +192,13 @@ export interface GroupData {
 
 // ─── Client ───────────────────────────────────────────────────────────────────
 
+const TOKEN_KEY = 'dls_auth_token'
+
 class ApiClient {
   private http: AxiosInstance
 
   constructor() {
     // Toujours utiliser le proxy relatif /api pour que les cookies fonctionnent
-    // VITE_API_URL n'est utilisé qu'en développement local
     const baseURL = import.meta.env.DEV
       ? (import.meta.env.VITE_API_URL ?? '/api')
       : '/api'
@@ -207,6 +208,12 @@ class ApiClient {
       timeout: 15_000,
       withCredentials: true,
     })
+
+    // Charger le token depuis localStorage au démarrage
+    const savedToken = localStorage.getItem(TOKEN_KEY)
+    if (savedToken) {
+      this.http.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+    }
 
     this.http.interceptors.response.use(
       (r) => r,
@@ -221,6 +228,15 @@ class ApiClient {
         return Promise.reject(err)
       }
     )
+  }
+
+  // ── Token management ─────────────────────────────────────────────────────
+  setToken(token: string | null) {
+    if (token) {
+      this.http.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    } else {
+      delete this.http.defaults.headers.common['Authorization']
+    }
   }
 
   // ── Auth ─────────────────────────────────────────────────────────────────
