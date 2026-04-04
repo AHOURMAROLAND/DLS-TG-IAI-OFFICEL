@@ -13,15 +13,18 @@ export default function Home() {
   const { data: tournaments = [], isLoading } = useTournaments()
   const { user } = useAuth()
 
+  // Sécurité — s'assurer que tournaments est bien un tableau
+  const tournamentList = Array.isArray(tournaments) ? tournaments : []
+
   // Mes tournois créés (creator_id === user.id)
   const myTournaments = user
-    ? tournaments.filter(t => t.creator_id === user.id)
+    ? tournamentList.filter(t => t.creator_id === user.id)
     : []
 
   // Tous les autres
   const otherTournaments = user
-    ? tournaments.filter(t => t.creator_id !== user.id)
-    : tournaments
+    ? tournamentList.filter(t => t.creator_id !== user.id)
+    : tournamentList
 
   const handleJoin = () => {
     const slug = code.trim()
