@@ -51,6 +51,12 @@ class TournamentOut(BaseModel):
         def _val(v):
             return v.value if hasattr(v, "value") else (v or "")
 
+        # Compatibilité v1 : visibility peut être None si la migration n'est pas encore appliquée
+        try:
+            vis = _val(tournament.visibility) or "public"
+        except Exception:
+            vis = "public"
+
         return cls(
             id=str(tournament.id),
             slug=tournament.slug,
@@ -65,6 +71,6 @@ class TournamentOut(BaseModel):
             qualified_per_group=tournament.qualified_per_group or 2,
             elimination_round=tournament.elimination_round or "",
             status=_val(tournament.status),
-            visibility=_val(tournament.visibility) or "public",
+            visibility=vis,
             creator_id=str(tournament.creator_id),
         )

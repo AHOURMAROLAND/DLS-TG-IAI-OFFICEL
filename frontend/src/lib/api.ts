@@ -43,7 +43,7 @@ export interface Tournament {
   qualified_per_group: number
   elimination_round: string
   status: TournamentStatus
-  visibility: 'public' | 'private'
+  visibility: 'public' | 'private'  // défaut "public" pour les tournois v1
   creator_id: string
 }
 
