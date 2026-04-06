@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..database import get_db
-from ..models.tournament import Tournament, TournamentStatus
+from ..models.tournament import Tournament, TournamentStatus, TournamentVisibility
 from ..models.player import Player, PlayerStatus
 from ..models.user import User
 from ..schemas.tournament import TournamentOut
@@ -16,7 +16,7 @@ from ..services.draw_service import (
 from ..models.match import MatchPhase
 from ..websocket.manager import manager
 from ..utils.logger import logger
-from ..dependencies import require_auth
+from ..dependencies import require_auth, optional_auth
 
 router = APIRouter()
 
@@ -67,6 +67,7 @@ class TournamentCreateJSON(PydanticModel):
     teams_per_group: int = 0
     qualified_per_group: int = 2
     elimination_round: str = ""
+    visibility: str = "public"  # "public" | "private" (v2)
 
 
 @router.post("/json")
@@ -90,6 +91,7 @@ async def create_tournament_json(
         group_count=body.group_count, teams_per_group=body.teams_per_group,
         qualified_per_group=body.qualified_per_group, elimination_round=body.elimination_round,
         creator_id=current_user.id, status=TournamentStatus.REGISTRATION,
+        visibility=body.visibility if body.visibility in ("public", "private") else "public",
     )
     db.add(tournament)
     await db.commit()
@@ -109,6 +111,7 @@ async def create_tournament(
     teams_per_group: int = Form(0),
     qualified_per_group: int = Form(2),
     elimination_round: str = Form(""),
+    visibility: str = Form("public"),
     logo: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
@@ -149,6 +152,7 @@ async def create_tournament(
         elimination_round=elimination_round,
         creator_id=current_user.id,
         status=TournamentStatus.REGISTRATION,
+        visibility=visibility if visibility in ("public", "private") else "public",
     )
     db.add(tournament)
     await db.commit()
@@ -159,8 +163,40 @@ async def create_tournament(
 
 
 @router.get("/")
-async def get_tournaments(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Tournament).order_by(Tournament.created_at.desc()))
+async def get_tournaments(
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(optional_auth),
+):
+    """
+    Sans auth : retourne uniquement les tournois publics.
+    Avec auth : retourne les publics + les tournois du user (créés ou rejoints).
+    """
+    if current_user is None:
+        result = await db.execute(
+            select(Tournament)
+            .where(Tournament.visibility == TournamentVisibility.PUBLIC)
+            .order_by(Tournament.created_at.desc())
+        )
+        return [TournamentOut.from_db(t) for t in result.scalars().all()]
+
+    # Utilisateur connecté : publics + ses propres tournois (privés inclus)
+    from sqlalchemy import or_
+    players_result = await db.execute(
+        select(Player.tournament_id).where(Player.user_id == current_user.id)
+    )
+    participating_ids = [row[0] for row in players_result.all()]
+
+    result = await db.execute(
+        select(Tournament)
+        .where(
+            or_(
+                Tournament.visibility == TournamentVisibility.PUBLIC,
+                Tournament.creator_id == current_user.id,
+                Tournament.id.in_(participating_ids),
+            )
+        )
+        .order_by(Tournament.created_at.desc())
+    )
     return [TournamentOut.from_db(t) for t in result.scalars().all()]
 
 
@@ -227,6 +263,7 @@ async def get_tournament_logo(slug: str, db: AsyncSession = Depends(get_db)):
 async def update_tournament(
     slug: str,
     name: str = Form(None),
+    visibility: str = Form(None),
     logo: UploadFile = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
@@ -237,9 +274,13 @@ async def update_tournament(
         raise HTTPException(404, "Tournoi introuvable")
     if t.creator_id != current_user.id:
         raise HTTPException(403, "Accès refusé")
+    if t.status == TournamentStatus.FINISHED:
+        raise HTTPException(400, "Impossible de modifier un tournoi terminé")
 
     if name and name.strip():
         t.name = name.strip()
+    if visibility and visibility in ("public", "private"):
+        t.visibility = visibility
     if logo:
         allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
         if logo.content_type not in allowed_types:

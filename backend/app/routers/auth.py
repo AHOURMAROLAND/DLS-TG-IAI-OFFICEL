@@ -10,20 +10,21 @@ from ..services.auth_service import (
     hash_password, verify_password, validate_password,
     create_access_token, get_current_user, suggest_pseudos,
 )
+from ..services.tracker_service import fetch_player_data, parse_player_info
 from ..config import settings
+
 from ..utils.logger import logger
 
 router = APIRouter()
-
 COOKIE_NAME = "dls_token"
+
+
 COOKIE_MAX_AGE = 30 * 24 * 3600  # 30 jours
-
-
-# ─── Schemas ──────────────────────────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
     pseudo: str = Field(..., min_length=3, max_length=30)
     password: str = Field(..., min_length=6)
+    dll_idx: str | None = None  # Optionnel — associé au compte si fourni (v2)
 
 
 class LoginRequest(BaseModel):
@@ -34,6 +35,9 @@ class LoginRequest(BaseModel):
 class UserOut(BaseModel):
     id: str
     pseudo: str
+    dll_idx: str | None = None
+    dll_team_name: str | None = None
+    dll_division: int | None = None
     created_at: str
 
 
@@ -45,6 +49,7 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
     Crée un compte utilisateur.
     - Pseudo unique (suggestions si déjà pris)
     - Mot de passe : min 6 chars, 1 majuscule, 1 chiffre, 1 spécial
+    - dll_idx optionnel : vérifié via tracker FTGames, stocké en lowercase
     """
     # Validation mot de passe
     valid, msg = validate_password(body.password)
@@ -60,9 +65,36 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
             "suggestions": suggestions,
         })
 
+    # Traitement idx DLS optionnel
+    dll_idx = None
+    dll_team_name = None
+    dll_division = None
+
+    if body.dll_idx and body.dll_idx.strip():
+        dll_idx = body.dll_idx.strip().lower()  # Normalisation lowercase — Req 5.2
+
+        # Vérifier unicité de l'idx en base
+        existing_idx = await db.execute(select(User).where(User.dll_idx == dll_idx))
+        if existing_idx.scalar_one_or_none():
+            raise HTTPException(409, "Cet identifiant DLS est déjà associé à un compte")
+
+        # Vérifier l'idx via le tracker FTGames
+        try:
+            tracker_data = await fetch_player_data(dll_idx)
+            info = parse_player_info(tracker_data)
+            dll_team_name = info["team_name"]
+            dll_division = info["division"]
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        except ConnectionError as e:
+            raise HTTPException(503, str(e))
+
     user = User(
         pseudo=body.pseudo,
         password_hash=hash_password(body.password),
+        dll_idx=dll_idx,
+        dll_team_name=dll_team_name,
+        dll_division=dll_division,
     )
     db.add(user)
     await db.commit()
@@ -78,8 +110,15 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
         secure=settings.is_production,
     )
 
-    logger.info(f"Nouveau compte créé : {user.pseudo}")
-    return {"id": str(user.id), "pseudo": user.pseudo, "token": token}
+    logger.info(f"Nouveau compte créé : {user.pseudo}" + (f" (idx: {dll_idx})" if dll_idx else ""))
+    return {
+        "id": str(user.id),
+        "pseudo": user.pseudo,
+        "dll_idx": user.dll_idx,
+        "dll_team_name": user.dll_team_name,
+        "dll_division": user.dll_division,
+        "token": token,
+    }
 
 
 @router.post("/login")
@@ -150,7 +189,13 @@ async def get_me(request: Request, db: AsyncSession = Depends(get_db)):
     user.last_active_at = datetime.now(timezone.utc)
     await db.commit()
 
-    return {"id": str(user.id), "pseudo": user.pseudo}
+    return {
+        "id": str(user.id),
+        "pseudo": user.pseudo,
+        "dll_idx": user.dll_idx,
+        "dll_team_name": user.dll_team_name,
+        "dll_division": user.dll_division,
+    }
 
 
 @router.get("/check-pseudo/{pseudo}")

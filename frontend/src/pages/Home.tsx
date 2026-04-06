@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings } from 'lucide-react'
+import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, Lock } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
@@ -187,6 +187,12 @@ function TournamentRow({
           <p className="font-semibold text-white truncate">{t.name}</p>
           {role === 'owner' && <span className="dls-badge dls-badge-gold flex-shrink-0">Créateur</span>}
           {role === 'player' && <span className="dls-badge dls-badge-green flex-shrink-0">Inscrit</span>}
+          {t.visibility === 'private' && (
+            <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+              style={{ background: 'rgba(148,163,184,0.1)', color: '#94A3B8', border: '1px solid rgba(148,163,184,0.15)' }}>
+              <Lock size={9} /> Privé
+            </span>
+          )}
         </div>
         <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
           {tournamentTypeLabel(t.tournament_type)} · {t.max_teams} équipes

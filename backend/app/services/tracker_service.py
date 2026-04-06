@@ -51,7 +51,9 @@ async def fetch_player_data(dll_idx: str) -> dict:
     Récupère les données FTGames pour un joueur.
     Lève ValueError si l'idx est invalide/introuvable.
     Lève ConnectionError si le tracker est indisponible.
+    L'idx est normalisé en minuscules avant tout appel (l'API FTGames est case-sensitive).
     """
+    dll_idx = dll_idx.lower()  # Normalisation systématique — Req 5.1, 5.3, 5.5
     await asyncio.sleep(TRACKER_REQUEST_DELAY)
 
     payload = {

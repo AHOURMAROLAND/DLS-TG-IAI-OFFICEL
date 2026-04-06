@@ -35,7 +35,8 @@ class TournamentOut(BaseModel):
     qualified_per_group: int
     elimination_round: str
     status: str
-    creator_id: str  # ID de l'utilisateur créateur (pas de token exposé)
+    visibility: str  # "public" | "private" (v2)
+    creator_id: str
 
     class Config:
         from_attributes = True
@@ -64,5 +65,6 @@ class TournamentOut(BaseModel):
             qualified_per_group=tournament.qualified_per_group or 2,
             elimination_round=tournament.elimination_round or "",
             status=_val(tournament.status),
+            visibility=_val(tournament.visibility) or "public",
             creator_id=str(tournament.creator_id),
         )

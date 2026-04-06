@@ -23,6 +23,7 @@ class PlayerOut(BaseModel):
     status: str
     group_id: Optional[str]
     is_creator: bool
+    registered_at: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -30,3 +31,14 @@ class PlayerOut(BaseModel):
 class PlayerDecision(BaseModel):
     player_id: UUID
     decision: str
+
+class AddPlayerManualRequest(BaseModel):
+    """Payload pour l'ajout manuel d'un participant par le créateur (v2)."""
+    dll_idx: str = Field(..., min_length=1, max_length=20)
+    pseudo: str = Field(..., min_length=1, max_length=50)
+    user_id: Optional[str] = None  # UUID du user existant, null = invité
+
+class UserSearchResult(BaseModel):
+    """Résultat de recherche d'utilisateur par pseudo (v2)."""
+    id: str
+    pseudo: str

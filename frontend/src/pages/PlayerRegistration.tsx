@@ -12,7 +12,7 @@ export default function PlayerRegistration() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
   const { data: tournament } = useTournament(slug)
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading, user } = useAuth()
 
   // Rediriger vers login si non connecté, en préservant le slug
   useEffect(() => {
@@ -29,12 +29,34 @@ export default function PlayerRegistration() {
   const [verifying, setVerifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Debounce 800ms sur le champ idx
+  // Pré-remplissage depuis le profil si l'user a un idx lié (v2)
+  const hasProfileIdx = !!(user?.dll_idx)
   useEffect(() => {
+    if (user?.dll_idx && user.pseudo) {
+      setIdx(user.dll_idx)
+      setPseudo(user.pseudo)
+      // Construire la fiche joueur depuis les données du profil sans appel tracker
+      if (user.dll_team_name != null && user.dll_division != null) {
+        setPlayerInfo({
+          team_name: user.dll_team_name,
+          division: user.dll_division,
+          played: 0,
+          won: 0,
+          lost: 0,
+          win_rate: 0,
+          recent_matches: [],
+        })
+      }
+    }
+  }, [user])
+
+  // Debounce 800ms sur le champ idx — uniquement si pas de profil idx
+  useEffect(() => {
+    if (hasProfileIdx) return  // Pré-rempli depuis le profil, pas besoin de vérifier
     if (!idx.trim() || idx.length < 8) { setPlayerInfo(null); return }
     const timer = setTimeout(() => verifyIdx(), 800)
     return () => clearTimeout(timer)
-  }, [idx])
+  }, [idx, hasProfileIdx])
 
   const verifyIdx = async () => {
     if (!idx.trim()) return
@@ -122,19 +144,27 @@ export default function PlayerRegistration() {
         {/* idx DLS */}
         <div>
           <label className="dls-label">Identifiant DLS (idx) *</label>
-          <div className="flex gap-2">
-            <input className="dls-input flex-1 font-mono" placeholder="Ex: xxxxxxxx"
-              value={idx} onChange={e => { setIdx(e.target.value); setPlayerInfo(null) }}
-              onKeyDown={e => e.key === 'Enter' && verifyIdx()} />
-            <button onClick={verifyIdx} disabled={verifying || idx.trim().length < 8}
-              className="dls-btn dls-btn-primary" title="Vérifier">
-              {verifying ? <span className="dls-spinner dls-spinner-sm" /> : <Search size={16} />}
-            </button>
-          </div>
-          {idx.length > 0 && idx.length < 8 && (
+          {hasProfileIdx ? (
+            <div className="dls-input font-mono flex items-center gap-2"
+              style={{ background: 'rgba(22,163,74,0.06)', borderColor: 'rgba(22,163,74,0.3)', cursor: 'default' }}>
+              <span className="flex-1 text-white">{idx}</span>
+              <span className="text-xs" style={{ color: '#4ADE80' }}>✓ Lié à ton compte</span>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input className="dls-input flex-1 font-mono" placeholder="Ex: xxxxxxxx"
+                value={idx} onChange={e => { setIdx(e.target.value); setPlayerInfo(null) }}
+                onKeyDown={e => e.key === 'Enter' && verifyIdx()} />
+              <button onClick={verifyIdx} disabled={verifying || idx.trim().length < 8}
+                className="dls-btn dls-btn-primary" title="Vérifier">
+                {verifying ? <span className="dls-spinner dls-spinner-sm" /> : <Search size={16} />}
+              </button>
+            </div>
+          )}
+          {!hasProfileIdx && idx.length > 0 && idx.length < 8 && (
             <p className="text-xs mt-1" style={{ color: '#F87171' }}>L'idx doit contenir au moins 8 caractères</p>
           )}
-          {idx.length >= 8 && !playerInfo && !verifying && (
+          {!hasProfileIdx && idx.length >= 8 && !playerInfo && !verifying && (
             <p className="text-xs mt-1" style={{ color: '#64748B' }}>Vérification automatique en cours…</p>
           )}
         </div>

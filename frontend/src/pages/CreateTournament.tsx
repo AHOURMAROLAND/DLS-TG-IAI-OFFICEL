@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Trophy, Upload, ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { Trophy, Upload, ChevronRight, ChevronLeft, Check, Globe, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
 import type { GroupSuggestion } from '../lib/api'
@@ -19,6 +19,7 @@ const schema = z.object({
   group_count: z.coerce.number().min(2).max(16).optional(),
   teams_per_group: z.coerce.number().min(3).max(8).optional(),
   qualified_per_group: z.coerce.number().min(1).max(4).optional(),
+  visibility: z.enum(['public', 'private']).default('public'),
 })
 type Form = z.infer<typeof schema>
 
@@ -51,7 +52,7 @@ export default function CreateTournament() {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
     mode: 'onBlur',
-    defaultValues: { name: '', tournament_type: 'elimination', elimination_type: 'single', championship_legs: 'single', max_teams: 8 },
+    defaultValues: { name: '', tournament_type: 'elimination', elimination_type: 'single', championship_legs: 'single', max_teams: 8, visibility: 'public' },
   })
 
   const type = watch('tournament_type')
@@ -168,6 +169,29 @@ export default function CreateTournament() {
                 ))}
               </div>
             </div>
+            <div>
+              <label className="dls-label">Visibilité</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: 'public', label: 'Public', desc: 'Visible sur la page d\'accueil', icon: <Globe size={14} /> },
+                  { value: 'private', label: 'Privé', desc: 'Accessible via lien uniquement', icon: <Lock size={14} /> },
+                ] as const).map(opt => (
+                  <label key={opt.value} className="cursor-pointer">
+                    <input type="radio" value={opt.value} {...register('visibility')} className="sr-only" />
+                    <div className="rounded-xl p-3 border transition-all" style={{
+                      background: values.visibility === opt.value ? 'rgba(17,85,204,0.15)' : 'rgba(255,255,255,0.03)',
+                      borderColor: values.visibility === opt.value ? '#1155CC' : 'rgba(91,29,176,0.25)',
+                    }}>
+                      <div className="flex items-center gap-1.5 mb-1" style={{ color: values.visibility === opt.value ? '#fff' : '#64748B' }}>
+                        {opt.icon}
+                        <span className="text-sm font-semibold">{opt.label}</span>
+                      </div>
+                      <p className="text-xs" style={{ color: '#64748B' }}>{opt.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
             <button type="button" onClick={() => setStep(1)} className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
               Suivant <ChevronRight size={16} />
             </button>
@@ -254,6 +278,7 @@ export default function CreateTournament() {
               <Row label="Nom" value={values.name || '—'} />
               <Row label="Mode" value={TYPE_LABELS[values.tournament_type] || ''} />
               <Row label="Équipes" value={String(values.max_teams)} />
+              <Row label="Visibilité" value={values.visibility === 'private' ? '🔒 Privé' : '🌐 Public'} />
               {type === 'elimination' && <Row label="Élimination" value={values.elimination_type === 'double' ? 'Double' : 'Simple'} />}
               {type === 'championship' && <>
                 <Row label="Legs" value={values.championship_legs === 'double' ? 'Aller-retour' : 'Aller simple'} />

@@ -43,12 +43,16 @@ export interface Tournament {
   qualified_per_group: number
   elimination_round: string
   status: TournamentStatus
-  creator_id: string  // ID utilisateur (plus de creator_session)
+  visibility: 'public' | 'private'
+  creator_id: string
 }
 
 export interface AuthUser {
   id: string
   pseudo: string
+  dll_idx?: string | null
+  dll_team_name?: string | null
+  dll_division?: number | null
 }
 
 export interface Player {
@@ -241,8 +245,12 @@ class ApiClient {
   }
 
   // ── Auth ─────────────────────────────────────────────────────────────────
-  async register(pseudo: string, password: string) {
-    const r = await this.http.post('/auth/register', { pseudo, password })
+  async register(pseudo: string, password: string, dllIdx?: string) {
+    const r = await this.http.post('/auth/register', {
+      pseudo,
+      password,
+      ...(dllIdx ? { dll_idx: dllIdx.trim().toLowerCase() } : {}),
+    })
     return r.data as AuthUser & { token: string }
   }
 
@@ -439,6 +447,24 @@ class ApiClient {
   async getScorers(slug: string): Promise<ScorerEntry[]> {
     const r = await this.http.get(`/matches/scorers/${slug}`)
     return r.data
+  }
+
+  // ── Players v2 ───────────────────────────────────────────────────────────
+  async searchUsers(pseudo: string): Promise<{ id: string; pseudo: string }[]> {
+    const r = await this.http.get('/players/search-user', { params: { pseudo } })
+    return r.data
+  }
+
+  async addPlayerManually(slug: string, data: { dll_idx: string; pseudo: string; user_id?: string }) {
+    const r = await this.http.post(`/players/add/${slug}`, {
+      ...data,
+      dll_idx: data.dll_idx.trim().toLowerCase(),
+    })
+    return r.data
+  }
+
+  async deletePlayer(playerId: string): Promise<void> {
+    await this.http.delete(`/players/${playerId}`)
   }
 }
 
