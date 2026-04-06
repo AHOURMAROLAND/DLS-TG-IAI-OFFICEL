@@ -308,7 +308,7 @@ async def generate_draw(
     ]
 
     if t.tournament_type == "groups":
-        draw = balanced_draw(players_data, t.group_count)
+        draw = {"groups": balanced_draw(players_data, t.group_count)}
     elif t.tournament_type == "championship":
         legs = t.championship_legs.value if hasattr(t.championship_legs, 'value') else t.championship_legs
         draw = {"matchups": championship_draw(players_data, legs)}
@@ -337,6 +337,8 @@ async def confirm_draw(
         raise HTTPException(403, "Accès refusé")
     if t.status == TournamentStatus.IN_PROGRESS:
         raise HTTPException(400, "Le tirage a déjà été confirmé")
+    if t.status == TournamentStatus.FINISHED:
+        raise HTTPException(400, "Le tournoi est terminé")
 
     draw = body.draw
     if t.tournament_type == "groups":

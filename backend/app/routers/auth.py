@@ -132,14 +132,23 @@ async def logout(response: Response):
 
 @router.get("/me")
 async def get_me(request: Request, db: AsyncSession = Depends(get_db)):
-    """Retourne l'utilisateur connecté depuis le cookie."""
+    """Retourne l'utilisateur connecté depuis le cookie ou le header Authorization."""
     token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+
     if not token:
         raise HTTPException(401, "Non authentifié")
 
     user = await get_current_user(token, db)
     if not user:
         raise HTTPException(401, "Session expirée ou invalide")
+
+    # Mettre à jour last_active_at pour éviter l'expiration par inactivité
+    user.last_active_at = datetime.now(timezone.utc)
+    await db.commit()
 
     return {"id": str(user.id), "pseudo": user.pseudo}
 

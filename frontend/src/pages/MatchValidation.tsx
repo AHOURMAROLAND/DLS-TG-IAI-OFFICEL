@@ -33,17 +33,38 @@ export default function MatchValidation() {
 
   const loadSuggestions = async (mid: string) => {
     setLoading(true)
+    setSuggestions([])
     try {
       const res = await api.getTrackerSuggestions(mid)
       setSuggestions(res.suggestions)
-    } catch { setSuggestions([]) }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      const status = e?.response?.status
+      if (status === 403) {
+        toast.error('Accès refusé — vous devez être le créateur du tournoi')
+      } else if (status === 503) {
+        toast.error('Tracker FTGames indisponible')
+      }
+      setSuggestions([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const validate = async () => {
     if (!selectedMatch) return
     const isManual = !selected && (manualHome !== '' || manualAway !== '')
     if (!selected && !isManual) { toast.error('Sélectionnez un match ou entrez un score manuel'); return }
+
+    // Valider les scores manuels
+    if (isManual) {
+      const h = parseInt(manualHome)
+      const a = parseInt(manualAway)
+      if (isNaN(h) || isNaN(a) || h < 0 || a < 0) {
+        toast.error('Scores invalides — entrez des nombres entiers positifs')
+        return
+      }
+    }
+
     setValidating(true)
     try {
       await api.validateMatch({
@@ -60,8 +81,10 @@ export default function MatchValidation() {
       toast.success('Score validé !')
       qc.invalidateQueries({ queryKey: ['matches', slug] })
       navigate(`/dashboard/${slug}`)
-    } catch { toast.error('Erreur lors de la validation') }
-    finally { setValidating(false) }
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail || e?.response?.data?.error?.message
+      toast.error(detail || 'Erreur lors de la validation')
+    } finally { setValidating(false) }
   }
 
   if (!selectedMatch && pending.length === 0) {

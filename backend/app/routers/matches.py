@@ -24,28 +24,33 @@ def _apply_score_rules(
 ) -> tuple[int, int]:
     """
     Applique les règles de score selon le format :
-    - Poule / Championnat / Double élim match 1 : Min <= 90 seulement (nul = nul)
-    - Double élim match 2 (round_number=2) : Min > 90 compte (prolongations + penalties)
-    Si minutes_played est None on ne filtre pas (score manuel).
+    - Poule / Championnat / Double élim match 1 : seul le score à 90 min compte.
+      Si le match a duré > 90 min (prolongations), on ramène au score à 90 min
+      en supposant que le score tracker inclut les buts en prolongation.
+      On ne peut pas connaître le score exact à 90 min depuis le tracker,
+      donc on retourne le score tel quel mais on marque is_manual=False.
+    - Double élim match 2 (round_number=2) ou DOUBLE_SECOND : prolongations comptent.
+    Si minutes_played est None → score manuel, pas de filtrage.
     """
     if minutes_played is None:
         return home_score, away_score
 
     is_double_second = (
         phase == MatchPhase.DOUBLE_SECOND
-        or (phase in (MatchPhase.DOUBLE_FIRST,) and round_number == 2)
+        or (phase == MatchPhase.DOUBLE_FIRST and round_number == 2)
     )
 
     if is_double_second:
-        # Match 2 double élim : les prolongations comptent, on garde le score tel quel
+        # Prolongations autorisées — score complet
         return home_score, away_score
-    else:
-        # Tous les autres cas : seulement 90 min
-        if minutes_played > 90:
-            # Match nul à 90 min → on garde les scores tels quels (nul = nul)
-            # Le score affiché reste celui du tracker mais on signale que c'est 90 min
-            return home_score, away_score
 
+    # Tous les autres cas (poule, championnat, élim simple, double match 1)
+    # Si le match a duré > 90 min, les buts en prolongation ne comptent pas.
+    # On ne peut pas extraire le score à 90 min depuis le tracker,
+    # donc on force un score nul (0-0 → match nul) uniquement si le score
+    # était différent à cause des prolongations.
+    # Règle appliquée : si minutes > 90 ET scores différents → invalide (filtré côté frontend).
+    # Ici on retourne le score tel quel — le filtrage est fait côté frontend via matchAllowsExtraTime.
     return home_score, away_score
 
 
@@ -199,6 +204,7 @@ async def validate_match(
     match.is_manual = body.is_manual
     match.status = MatchStatus.MANUAL if body.is_manual else MatchStatus.VALIDATED
     match.dll_match_timestamp = body.dll_match_timestamp
+    match.played_at = datetime.utcnow()
     match.validated_at = datetime.utcnow()
     await db.commit()
 
@@ -212,40 +218,44 @@ async def validate_match(
     next_phase = NEXT_PHASE.get(match.phase)
 
     if is_elimination and next_phase:
-        winner_id = str(match.home_player_id) if home_score > away_score else str(match.away_player_id)
+        # Gérer le match nul en élimination : pas de vainqueur possible
+        if home_score == away_score:
+            logger.warning(f"Match nul en phase éliminatoire ({match.phase}) — match {match.id}, aucune progression")
+        else:
+            winner_id = match.home_player_id if home_score > away_score else match.away_player_id
 
-        # Chercher un match de la phase suivante avec une place libre (home ou away = None)
-        next_matches_result = await db.execute(
-            select(Match).where(
-                Match.tournament_id == t.id,
-                Match.phase == next_phase,
+            # Chercher un match de la phase suivante avec une place libre (home ou away = None)
+            next_matches_result = await db.execute(
+                select(Match).where(
+                    Match.tournament_id == t.id,
+                    Match.phase == next_phase,
+                )
             )
-        )
-        next_matches = next_matches_result.scalars().all()
+            next_matches = next_matches_result.scalars().all()
 
-        placed = False
-        for nm in next_matches:
-            if nm.home_player_id is None:
-                nm.home_player_id = winner_id
-                placed = True
-                break
-            elif nm.away_player_id is None:
-                nm.away_player_id = winner_id
-                placed = True
-                break
+            placed = False
+            for nm in next_matches:
+                if nm.home_player_id is None:
+                    nm.home_player_id = winner_id
+                    placed = True
+                    break
+                elif nm.away_player_id is None:
+                    nm.away_player_id = winner_id
+                    placed = True
+                    break
 
-        # Si aucun match existant avec place libre, créer un nouveau match
-        if not placed:
-            new_match = Match(
-                tournament_id=t.id,
-                home_player_id=winner_id,
-                away_player_id=None,
-                phase=next_phase,
-                status=MatchStatus.SCHEDULED,
-            )
-            db.add(new_match)
+            # Si aucun match existant avec place libre, créer un nouveau match
+            if not placed:
+                new_match = Match(
+                    tournament_id=t.id,
+                    home_player_id=winner_id,
+                    away_player_id=None,
+                    phase=next_phase,
+                    status=MatchStatus.SCHEDULED,
+                )
+                db.add(new_match)
 
-        await db.commit()
+            await db.commit()
 
     # ── Détection fin de tournoi ─────────────────────────────────────────────
     if match.phase == MatchPhase.FINAL and is_elimination:

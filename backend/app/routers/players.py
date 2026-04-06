@@ -112,7 +112,93 @@ async def register_player(
     }
 
 
-@router.get("/logo/{player_id}")
+@router.post("/register/{slug}/creator")
+async def register_creator(
+    slug: str,
+    pseudo: str = Form(...),
+    dll_idx: str = Form(...),
+    logo: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_auth),
+):
+    """
+    Inscrit le créateur du tournoi comme joueur — alias de /register/{slug}.
+    Le créateur est auto-accepté et marqué is_creator=True.
+    """
+    result = await db.execute(select(Tournament).where(Tournament.slug == slug))
+    t = result.scalar_one_or_none()
+    if not t:
+        raise HTTPException(404, "Tournoi introuvable")
+    if t.creator_id != current_user.id:
+        raise HTTPException(403, "Réservé au créateur du tournoi")
+    if t.status != TournamentStatus.REGISTRATION:
+        raise HTTPException(400, "Les inscriptions sont fermées")
+
+    existing_user = await db.execute(
+        select(Player).where(Player.tournament_id == t.id, Player.user_id == current_user.id)
+    )
+    if existing_user.scalar_one_or_none():
+        raise HTTPException(400, "Vous êtes déjà inscrit à ce tournoi")
+
+    existing_idx = await db.execute(
+        select(Player).where(Player.tournament_id == t.id, Player.dll_idx == dll_idx)
+    )
+    if existing_idx.scalar_one_or_none():
+        raise HTTPException(400, "Cet identifiant DLL est déjà inscrit dans ce tournoi")
+
+    try:
+        tracker_data = await fetch_player_data(dll_idx)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except ConnectionError as e:
+        raise HTTPException(503, str(e))
+    info = parse_player_info(tracker_data)
+
+    logo_data = None
+    logo_content_type = None
+    if logo:
+        allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+        if logo.content_type not in allowed_types:
+            raise HTTPException(400, "Type de fichier non supporté.")
+        content = await logo.read()
+        if len(content) > 5 * 1024 * 1024:
+            raise HTTPException(400, "L'image ne doit pas dépasser 5MB.")
+        logo_data = content
+        logo_content_type = logo.content_type
+
+    player = Player(
+        tournament_id=t.id,
+        user_id=current_user.id,
+        pseudo=pseudo,
+        dll_idx=dll_idx,
+        team_name=info["team_name"],
+        logo_data=logo_data,
+        logo_content_type=logo_content_type,
+        dll_division=info["division"],
+        dll_played=info["played"],
+        dll_won=info["won"],
+        dll_lost=info["lost"],
+        status=PlayerStatus.ACCEPTED,
+        is_creator=True,
+    )
+    db.add(player)
+    await db.commit()
+    await db.refresh(player)
+
+    await manager.broadcast(str(t.id), {
+        "event": "new_registration",
+        "player": {"pseudo": pseudo, "team_name": info["team_name"], "division": info["division"]},
+    })
+    logger.info(f"Créateur inscrit comme joueur: {current_user.pseudo} ({dll_idx}) dans {slug}")
+    return {
+        "player_id": str(player.id),
+        "status": player.status.value,
+        "team_name": info["team_name"],
+        "division": info["division"],
+    }
+
+
+
 async def get_player_logo(player_id: str, db: AsyncSession = Depends(get_db)):
     from fastapi.responses import Response
     result = await db.execute(select(Player).where(Player.id == player_id))

@@ -17,7 +17,8 @@ export default function DrawGeneration() {
   const [draw, setDraw] = useState<any>(null)
   const [generating, setGenerating] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const [confirmed, setConfirmed] = useState(t?.status === 'in_progress')
+  // Synchroniser confirmed avec le statut réel du tournoi (t peut être undefined au premier render)
+  const confirmed = t?.status === 'in_progress' || t?.status === 'finished'
 
   const accepted = players.filter(p => p.status === 'accepted')
 
@@ -40,12 +41,12 @@ export default function DrawGeneration() {
     setConfirming(true)
     try {
       await api.confirmDraw(slug, draw)
-      setConfirmed(true)
       qc.invalidateQueries({ queryKey: ['tournament', slug] })
       toast.success('Tournoi lancé !')
       setTimeout(() => navigate(`/tournament/${slug}/bracket`), 1500)
-    } catch {
-      toast.error('Erreur lors de la confirmation')
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail || e?.response?.data?.error?.message
+      toast.error(detail || 'Erreur lors de la confirmation')
     } finally {
       setConfirming(false)
     }
