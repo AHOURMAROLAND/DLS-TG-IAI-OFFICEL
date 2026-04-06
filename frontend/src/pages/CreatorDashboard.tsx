@@ -143,17 +143,6 @@ export default function CreatorDashboard() {
     }
   }
 
-  const handleDeleteGuest = async (playerId: string, pseudo: string) => {
-    if (!window.confirm(`Supprimer ${pseudo} ?`)) return
-    try {
-      await api.deletePlayer(playerId)
-      toast.success('Joueur supprimé')
-      qc.invalidateQueries({ queryKey: ['players', slug] })
-    } catch (e: any) {
-      toast.error(e?.response?.data?.detail || 'Erreur lors de la suppression')
-    }
-  }
-
   const copy = async () => {
     await copyToClipboard(inviteUrl)
     setCopied(true)

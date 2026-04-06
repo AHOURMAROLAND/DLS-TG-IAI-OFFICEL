@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { UserPlus, Eye, EyeOff, Check, X, Search, CheckCircle } from 'lucide-react'
+import { UserPlus, Eye, EyeOff, Check, X, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
