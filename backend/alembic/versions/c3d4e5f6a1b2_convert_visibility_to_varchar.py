@@ -34,14 +34,22 @@ def upgrade():
     col_type = _col_type("tournaments", "visibility")
 
     if col_type == "tournamentvisibility":
-        # Convertir l'enum en VARCHAR en castant via TEXT
+        # 1. Supprimer la valeur par défaut qui dépend du type enum
+        op.execute(text(
+            "ALTER TABLE tournaments ALTER COLUMN visibility DROP DEFAULT"
+        ))
+        # 2. Convertir la colonne de enum vers VARCHAR via cast TEXT
         op.execute(text(
             "ALTER TABLE tournaments "
             "ALTER COLUMN visibility TYPE VARCHAR(10) "
             "USING visibility::text"
         ))
-        # Supprimer le type enum devenu inutile
-        op.execute(text("DROP TYPE IF EXISTS tournamentvisibility"))
+        # 3. Remettre la valeur par défaut en VARCHAR
+        op.execute(text(
+            "ALTER TABLE tournaments ALTER COLUMN visibility SET DEFAULT 'public'"
+        ))
+        # 4. Supprimer le type enum maintenant sans dépendances
+        op.execute(text("DROP TYPE IF EXISTS tournamentvisibility CASCADE"))
 
     # S'assurer que toutes les lignes ont une valeur
     op.execute(text(
