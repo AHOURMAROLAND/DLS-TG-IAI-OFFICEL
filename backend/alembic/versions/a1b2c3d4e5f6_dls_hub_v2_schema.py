@@ -58,9 +58,11 @@ def upgrade():
         op.add_column("tournaments", sa.Column(
             "visibility",
             sa.String(10),          # "public" ou "private"
-            nullable=False,
+            nullable=True,          # nullable pour compatibilité migration partielle
             server_default="public",
         ))
+        # Mettre à jour les lignes existantes
+        op.execute(sa.text("UPDATE tournaments SET visibility = 'public' WHERE visibility IS NULL"))
 
     # ── players : contraintes d'unicité ──────────────────────────────────────
     if not _constraint_exists("players", "uq_players_tournament_idx"):

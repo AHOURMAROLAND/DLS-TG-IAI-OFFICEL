@@ -53,8 +53,7 @@ class Tournament(Base):
     elimination_round = Column(String(10), default="")
     status = Column(Enum(TournamentStatus), default=TournamentStatus.REGISTRATION)
     # Visibilité : "public" (page d'accueil) ou "private" (lien d'invitation uniquement)
-    # Stocké en VARCHAR pour éviter les problèmes de type enum PostgreSQL en migration
-    visibility = Column(sa.String(10), default="public", nullable=False)
+    visibility = Column(sa.String(10), default="public", nullable=True)
     # Lié à l'utilisateur créateur
     creator_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
