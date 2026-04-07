@@ -46,6 +46,20 @@ class Settings(BaseSettings):
     
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Retourne les origines CORS avec fallback sur les URLs connues."""
+        origins = list(self.BACKEND_CORS_ORIGINS)
+        # Toujours inclure les URLs de production connues
+        known = [
+            "https://dls-tg-iai-officel.vercel.app",
+            "https://dls-hub-frontend.vercel.app",
+        ]
+        for url in known:
+            if url not in origins:
+                origins.append(url)
+        return origins
     
     # Logging
     LOG_LEVEL: str = "INFO"
