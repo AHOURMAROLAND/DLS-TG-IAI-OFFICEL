@@ -47,6 +47,32 @@ export default function CreatorDashboard() {
 
   const { user: _user } = useAuth()
 
+  // Vérification idx pour ajout manuel (debounce 800ms) — doit être avant les early returns
+  const verifyAddIdx = useCallback(async (val: string) => {
+    const normalized = val.trim().toLowerCase()
+    if (normalized.length < 8) { setAddIdxInfo(null); setAddIdxStatus('idle'); return }
+    setAddIdxStatus('checking')
+    try {
+      const info = await api.verifyPlayer(normalized)
+      setAddIdxInfo(info)
+      setAddIdxStatus('ok')
+    } catch {
+      setAddIdxInfo(null)
+      setAddIdxStatus('error')
+    }
+  }, [])
+
+  // Recherche user par pseudo (debounce 400ms) — doit être avant les early returns
+  const searchUsers = useCallback(async (val: string) => {
+    if (val.trim().length < 2) { setUserSuggestions([]); return }
+    try {
+      const results = await api.searchUsers(val.trim())
+      setUserSuggestions(results)
+    } catch {
+      setUserSuggestions([])
+    }
+  }, [])
+
   // WebSocket — fil d'activité en temps réel
   const onWs = useCallback((msg: any) => {
     if (msg.event === 'online_count') {
@@ -79,17 +105,8 @@ export default function CreatorDashboard() {
 
   useWebSocket(t?.id, onWs)
 
-  if (isLoading) return <Loader />
-  if (!t) return null
-
-  const pending = players.filter(p => p.status === 'pending').length
-  const accepted = players.filter(p => p.status === 'accepted').length
-  const validated = matches.filter(m => m.status === 'validated' || m.status === 'manual').length
-  const awaitingValidation = matches.filter(m => m.status === 'pending_validation').length
-  const inviteUrl = `${window.location.origin}/join/${t.slug}`
-  const alreadyRegistered = players.some(p => p.is_creator)
-
   // Vérification idx pour ajout manuel (debounce 800ms)
+  // DOIT être avant les early returns (règles des hooks React)
   const verifyAddIdx = useCallback(async (val: string) => {
     const normalized = val.trim().toLowerCase()
     if (normalized.length < 8) { setAddIdxInfo(null); setAddIdxStatus('idle'); return }
@@ -114,6 +131,9 @@ export default function CreatorDashboard() {
       setUserSuggestions([])
     }
   }, [])
+
+  if (isLoading) return <Loader />
+  if (!t) return null
 
   const submitAddPlayer = async () => {
     if (!slug || !addIdx.trim() || !addPseudo.trim()) {

@@ -63,10 +63,12 @@ class RequestSizeMiddleware(BaseHTTPMiddleware):
 def setup_security_middleware(app) -> None:
     """Configure tous les middlewares de sécurité."""
 
-    # CORS — PATCH et DELETE inclus pour TournamentSettings
+    # CORS — origines autorisées + wildcard pour éviter les problèmes de cold start Render
+    cors_origins = settings.cors_origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=cors_origins,
+        allow_origin_regex=r"https://.*\.vercel\.app",  # Toutes les previews Vercel
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
