@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..database import get_db
-from ..models.tournament import Tournament, TournamentStatus, TournamentVisibility
+from ..models.tournament import Tournament, TournamentStatus
 from ..models.player import Player, PlayerStatus
 from ..models.user import User
 from ..schemas.tournament import TournamentOut
@@ -174,7 +174,7 @@ async def get_tournaments(
     if current_user is None:
         result = await db.execute(
             select(Tournament)
-            .where(Tournament.visibility == TournamentVisibility.PUBLIC)
+            .where(Tournament.visibility == "public")
             .order_by(Tournament.created_at.desc())
         )
         return [TournamentOut.from_db(t) for t in result.scalars().all()]
@@ -190,7 +190,7 @@ async def get_tournaments(
         select(Tournament)
         .where(
             or_(
-                Tournament.visibility == TournamentVisibility.PUBLIC,
+                Tournament.visibility == "public",
                 Tournament.creator_id == current_user.id,
                 Tournament.id.in_(participating_ids),
             )

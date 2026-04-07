@@ -1,5 +1,6 @@
 import uuid
 import enum
+import sqlalchemy as sa
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Enum, LargeBinary, ForeignKey
 from sqlalchemy.sql import func
 from ..database import Base
@@ -51,8 +52,9 @@ class Tournament(Base):
     qualified_per_group = Column(Integer, default=2)
     elimination_round = Column(String(10), default="")
     status = Column(Enum(TournamentStatus), default=TournamentStatus.REGISTRATION)
-    # Visibilité : public (page d'accueil) ou private (lien d'invitation uniquement)
-    visibility = Column(Enum(TournamentVisibility), default=TournamentVisibility.PUBLIC, nullable=False)
+    # Visibilité : "public" (page d'accueil) ou "private" (lien d'invitation uniquement)
+    # Stocké en VARCHAR pour éviter les problèmes de type enum PostgreSQL en migration
+    visibility = Column(sa.String(10), default="public", nullable=False)
     # Lié à l'utilisateur créateur
     creator_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
