@@ -15,8 +15,8 @@ ELIMINATION_VALID_SIZES = [4, 8, 16, 32]
 CHAMPIONSHIP_MIN = 4
 CHAMPIONSHIP_MAX = 20
 
-# Poules : nombre pair, min 8, max 48
-GROUPS_MIN = 8
+# Poules : nombre pair, min 6, max 48
+GROUPS_MIN = 6
 GROUPS_MAX = 48
 
 
@@ -124,7 +124,8 @@ def validate_tournament_size(
                 False,
                 f"Maximum {GROUPS_MAX} équipes pour le format Poules",
             )
-        if max_teams % 2 != 0:
+        # 6 équipes est valide (2 poules de 3)
+        if max_teams != 6 and max_teams % 2 != 0:
             return TournamentValidation(
                 False,
                 "Le nombre d'équipes doit être pair",
@@ -142,7 +143,7 @@ def suggest_group_configs(max_teams: int) -> list[GroupConfig]:
     Génère toutes les configurations de poules valides pour un nombre d'équipes donné.
     Triées par pertinence (configs "propres" en premier, puis par nombre de poules).
     """
-    if max_teams < GROUPS_MIN or max_teams % 2 != 0:
+    if max_teams < GROUPS_MIN or (max_teams % 2 != 0 and max_teams != 6):
         return []
 
     configs = []
@@ -244,6 +245,6 @@ def get_valid_team_counts(tournament_type: str) -> list[int]:
         return list(range(CHAMPIONSHIP_MIN, CHAMPIONSHIP_MAX + 1, 2))  # pairs de 4 à 20
 
     elif tournament_type == "groups":
-        return list(range(GROUPS_MIN, GROUPS_MAX + 1, 2))  # pairs de 8 à 48
+        return list(range(GROUPS_MIN, GROUPS_MAX + 1, 2))  # pairs de 6 à 48
 
     return []

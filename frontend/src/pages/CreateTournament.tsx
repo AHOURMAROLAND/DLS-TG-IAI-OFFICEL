@@ -26,7 +26,7 @@ type Form = z.infer<typeof schema>
 const STEPS = ['Infos', 'Format', 'Confirmation']
 const ELIM_SIZES = [4, 8, 16, 32]
 const CHAMP_SIZES = Array.from({ length: 9 }, (_, i) => (i + 2) * 2)
-const GROUP_SIZES = Array.from({ length: 21 }, (_, i) => (i + 4) * 2)
+const GROUP_SIZES = [6, ...Array.from({ length: 21 }, (_, i) => (i + 4) * 2)]
 const TYPE_LABELS: Record<string, string> = {
   elimination: 'Élimination directe',
   groups: 'Poules + Élimination',

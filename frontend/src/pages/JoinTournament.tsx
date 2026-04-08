@@ -123,10 +123,17 @@ export default function JoinTournament() {
             } />
           </div>
 
-          <button onClick={() => navigate(`/register/${tournament.slug}`)}
-            className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
-            <Users size={16} /> Rejoindre ce tournoi
-          </button>
+          {tournament.status !== 'registration' ? (
+            <div className="rounded-xl p-3 text-center text-sm mb-3"
+              style={{ background: 'rgba(168,11,28,0.1)', color: '#F87171', border: '1px solid rgba(168,11,28,0.2)' }}>
+              {tournament.status === 'finished' ? '🏆 Tournoi terminé' : '🔒 Inscriptions fermées'}
+            </div>
+          ) : (
+            <button onClick={() => navigate(`/register/${tournament.slug}`)}
+              className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
+              <Users size={16} /> Rejoindre ce tournoi
+            </button>
+          )}
           {user && tournament.creator_id === user.id && (
             <button onClick={() => navigate(`/dashboard/${tournament.slug}`)}
               className="dls-btn dls-btn-secondary dls-btn-full flex items-center justify-center gap-2 mt-2">

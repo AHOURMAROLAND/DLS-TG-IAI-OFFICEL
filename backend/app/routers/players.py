@@ -61,6 +61,14 @@ async def register_player(
     if t.status != TournamentStatus.REGISTRATION:
         raise HTTPException(400, "Les inscriptions sont fermées")
 
+    # Vérifier que le tournoi n'est pas complet (joueurs acceptés)
+    accepted_count_result = await db.execute(
+        select(Player).where(Player.tournament_id == t.id, Player.status == PlayerStatus.ACCEPTED)
+    )
+    accepted_count = len(accepted_count_result.scalars().all())
+    if accepted_count >= t.max_teams:
+        raise HTTPException(400, f"Le tournoi est complet ({t.max_teams}/{t.max_teams} équipes)")
+
     # Vérifier doublon (même user ou même idx)
     existing_user = await db.execute(
         select(Player).where(Player.tournament_id == t.id, Player.user_id == current_user.id)
@@ -331,6 +339,27 @@ async def player_decision(
 
     if body.decision == "accept":
         player.status = PlayerStatus.ACCEPTED
+        # Vérifier si le tournoi est maintenant complet → fermer les inscriptions
+        accepted_result = await db.execute(
+            select(Player).where(
+                Player.tournament_id == t.id,
+                Player.status == PlayerStatus.ACCEPTED,
+            )
+        )
+        accepted_players = accepted_result.scalars().all()
+        # +1 car le joueur courant vient d'être accepté mais pas encore commité
+        if len(accepted_players) + 1 >= t.max_teams:
+            # Rejeter automatiquement les joueurs en attente restants
+            pending_result = await db.execute(
+                select(Player).where(
+                    Player.tournament_id == t.id,
+                    Player.status == PlayerStatus.PENDING,
+                    Player.id != player.id,
+                )
+            )
+            for pending_player in pending_result.scalars().all():
+                pending_player.status = PlayerStatus.REJECTED
+            logger.info(f"Tournoi {t.slug} complet — inscriptions fermées automatiquement")
     elif body.decision == "reject":
         player.status = PlayerStatus.REJECTED
     else:
