@@ -47,7 +47,7 @@ export default function CreatorDashboard() {
 
   const { user: _user } = useAuth()
 
-  // Vérification idx pour ajout manuel (debounce 800ms) — doit être avant les early returns
+  // Vérification idx pour ajout manuel — DOIT être avant les early returns (règles des hooks React)
   const verifyAddIdx = useCallback(async (val: string) => {
     const normalized = val.trim().toLowerCase()
     if (normalized.length < 8) { setAddIdxInfo(null); setAddIdxStatus('idle'); return }
@@ -62,7 +62,7 @@ export default function CreatorDashboard() {
     }
   }, [])
 
-  // Recherche user par pseudo (debounce 400ms) — doit être avant les early returns
+  // Recherche user par pseudo — DOIT être avant les early returns
   const searchUsers = useCallback(async (val: string) => {
     if (val.trim().length < 2) { setUserSuggestions([]); return }
     try {
@@ -97,7 +97,6 @@ export default function CreatorDashboard() {
     setActivity(prev => [newItem, ...prev].slice(0, 10))
     qc.invalidateQueries({ queryKey: ['players', slug] })
     qc.invalidateQueries({ queryKey: ['matches', slug] })
-    // Rediriger vers finished si tournoi terminé
     if (msg.tournament_status === 'finished') {
       navigate(`/tournament/${slug}/finished`)
     }
@@ -105,35 +104,15 @@ export default function CreatorDashboard() {
 
   useWebSocket(t?.id, onWs)
 
-  // Vérification idx pour ajout manuel (debounce 800ms)
-  // DOIT être avant les early returns (règles des hooks React)
-  const verifyAddIdx = useCallback(async (val: string) => {
-    const normalized = val.trim().toLowerCase()
-    if (normalized.length < 8) { setAddIdxInfo(null); setAddIdxStatus('idle'); return }
-    setAddIdxStatus('checking')
-    try {
-      const info = await api.verifyPlayer(normalized)
-      setAddIdxInfo(info)
-      setAddIdxStatus('ok')
-    } catch {
-      setAddIdxInfo(null)
-      setAddIdxStatus('error')
-    }
-  }, [])
-
-  // Recherche user par pseudo (debounce 400ms)
-  const searchUsers = useCallback(async (val: string) => {
-    if (val.trim().length < 2) { setUserSuggestions([]); return }
-    try {
-      const results = await api.searchUsers(val.trim())
-      setUserSuggestions(results)
-    } catch {
-      setUserSuggestions([])
-    }
-  }, [])
-
   if (isLoading) return <Loader />
   if (!t) return null
+
+  const pending = players.filter(p => p.status === 'pending').length
+  const accepted = players.filter(p => p.status === 'accepted').length
+  const validated = matches.filter(m => m.status === 'validated' || m.status === 'manual').length
+  const awaitingValidation = matches.filter(m => m.status === 'pending_validation').length
+  const inviteUrl = `${window.location.origin}/join/${t.slug}`
+  const alreadyRegistered = players.some(p => p.is_creator)
 
   const submitAddPlayer = async () => {
     if (!slug || !addIdx.trim() || !addPseudo.trim()) {
