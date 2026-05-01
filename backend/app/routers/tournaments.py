@@ -358,6 +358,7 @@ async def delete_tournament(
     current_user: User = Depends(require_auth),
 ):
     from ..models.match import Match
+    from ..models.audit_log import AuditLog
     from sqlalchemy import delete as sa_delete
 
     result = await db.execute(select(Tournament).where(Tournament.slug == slug))
@@ -367,22 +368,26 @@ async def delete_tournament(
     if t.creator_id != current_user.id:
         raise HTTPException(403, "Accès refusé")
 
+    # Audit avant suppression (on garde la trace dans les logs user sans tournament_id)
     client_ip = request.client.host if request.client else None
     await audit(
         db,
         user_id=str(current_user.id),
         action="tournament_deleted",
-        tournament_id=str(t.id),
+        tournament_id=None,  # On met None pour éviter la FK violation lors du delete
         target_type="tournament",
         target_id=str(t.id),
         details={"name": t.name, "slug": t.slug},
         ip_address=client_ip,
     )
 
+    # Supprimer dans l'ordre : audit_logs → matches → players → tournament
+    await db.execute(sa_delete(AuditLog).where(AuditLog.tournament_id == t.id))
     await db.execute(sa_delete(Match).where(Match.tournament_id == t.id))
     await db.execute(sa_delete(Player).where(Player.tournament_id == t.id))
     await db.delete(t)
     await db.commit()
+    logger.info(f"Tournoi supprimé par {current_user.pseudo}: {t.name} ({t.slug})")
     return {"message": "Tournoi supprimé"}
 
 
