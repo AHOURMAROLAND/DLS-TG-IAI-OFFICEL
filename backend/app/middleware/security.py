@@ -2,7 +2,6 @@ from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -60,31 +59,68 @@ class RequestSizeMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class PublicImageCORSMiddleware(BaseHTTPMiddleware):
+    """
+    Ajoute Access-Control-Allow-Origin: * sur les endpoints d'images et pages OG publiques.
+
+    Nécessaire pour que WhatsApp, Telegram et autres bots de prévisualisation
+    puissent télécharger les logos des tournois depuis Render sans être bloqués
+    par la politique CORS stricte du reste de l'API.
+
+    Endpoints concernés :
+      - /api/tournaments/{slug}/logo  → logo du tournoi
+      - /api/players/logo/{id}        → logo du joueur
+      - /og/*                         → pages Open Graph
+    """
+    _PUBLIC_PREFIXES = (
+        "/og/",
+    )
+    _PUBLIC_SUFFIXES = (
+        "/logo",
+    )
+
+    def _is_public(self, path: str) -> bool:
+        return (
+            any(path.startswith(p) for p in self._PUBLIC_PREFIXES)
+            or any(path.endswith(s) for s in self._PUBLIC_SUFFIXES)
+            or "/logo/" in path
+        )
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if self._is_public(request.url.path):
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            response.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
+        return response
+
+
 def setup_security_middleware(app) -> None:
     """Configure tous les middlewares de sécurité."""
 
-    # CORS — origines autorisées + wildcard pour éviter les problèmes de cold start Render
+    # CORS — origines autorisées + wildcard pour les previews Vercel
     cors_origins = settings.cors_origins
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
-        allow_origin_regex=r"https://.*\.vercel\.app",  # Toutes les previews Vercel
+        allow_origin_regex=r"https://.*\.vercel\.app",
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 
-    # Trusted hosts + HTTPS redirect en production uniquement
+    # Trusted hosts en production uniquement
     if settings.is_production:
         app.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=["localhost", "127.0.0.1", "*.onrender.com", "*.vercel.app"],
         )
-        # HTTPSRedirectMiddleware désactivé — Render gère le HTTPS en amont (reverse proxy)
 
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(RequestSizeMiddleware)
+    # CORS public pour les images et pages OG (bots WhatsApp/Telegram)
+    app.add_middleware(PublicImageCORSMiddleware)
 
     # Rate limiting
     app.state.limiter = limiter
