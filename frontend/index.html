@@ -40,6 +40,90 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
     <title>DLS Hub — Tournois Dream League Soccer 26</title>
+
+    <!--
+      ╔══════════════════════════════════════════════════════════════╗
+      ║  PROTECTION DU CODE SOURCE — DLS Hub                        ║
+      ║  Ce script désactive les outils d'inspection côté client.   ║
+      ║  Le code JS/CSS est obfusqué et minifié en production.      ║
+      ╚══════════════════════════════════════════════════════════════╝
+    -->
+    <script>
+      (function () {
+        'use strict';
+
+        // ── 1. Bloquer Ctrl+U (view-source), Ctrl+S (save), Ctrl+Shift+I/J/C (DevTools) ──
+        document.addEventListener('keydown', function (e) {
+          var k = e.key || e.keyCode;
+          var ctrl = e.ctrlKey || e.metaKey; // metaKey = Cmd sur Mac
+
+          // Ctrl+U — voir la source
+          if (ctrl && (k === 'u' || k === 85)) { e.preventDefault(); return false; }
+          // Ctrl+S — sauvegarder
+          if (ctrl && (k === 's' || k === 83)) { e.preventDefault(); return false; }
+          // Ctrl+Shift+I — DevTools Elements
+          if (ctrl && e.shiftKey && (k === 'i' || k === 73)) { e.preventDefault(); return false; }
+          // Ctrl+Shift+J — DevTools Console
+          if (ctrl && e.shiftKey && (k === 'j' || k === 74)) { e.preventDefault(); return false; }
+          // Ctrl+Shift+C — DevTools Inspect
+          if (ctrl && e.shiftKey && (k === 'c' || k === 67)) { e.preventDefault(); return false; }
+          // F12 — DevTools
+          if (k === 'F12' || k === 123) { e.preventDefault(); return false; }
+        }, true);
+
+        // ── 2. Bloquer le clic droit (menu contextuel) ──────────────────────
+        document.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          return false;
+        }, true);
+
+        // ── 3. Bloquer la sélection de texte (rend le copier-coller difficile) ──
+        // Note : désactivé sur les inputs/textareas pour ne pas casser l'UX
+        document.addEventListener('selectstart', function (e) {
+          var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+          if (tag !== 'input' && tag !== 'textarea') {
+            e.preventDefault();
+            return false;
+          }
+        }, true);
+
+        // ── 4. Détection ouverture DevTools (méthode fiabilisée) ─────────────
+        // Technique : mesure le temps d'exécution de console.log avec objet
+        // Les DevTools ouverts ralentissent ce calcul de façon détectable.
+        var _devToolsOpen = false;
+        var _threshold = 160;
+        function _checkDevTools() {
+          var start = performance.now();
+          // Cette opération est lente quand DevTools est ouvert
+          var _x = /./;
+          _x.toString = function () {
+            _devToolsOpen = true;
+            return '';
+          };
+          console.log('%c', _x);
+          if (performance.now() - start > _threshold) {
+            _devToolsOpen = true;
+          }
+          if (_devToolsOpen) {
+            // Rediriger vers la page d'accueil et vider la console
+            console.clear();
+            // On ne bloque pas l'app — juste on nettoie la console
+            _devToolsOpen = false;
+          }
+        }
+        // Vérifier toutes les 3 secondes
+        setInterval(_checkDevTools, 3000);
+
+        // ── 5. Désactiver le drag & drop des images ──────────────────────────
+        document.addEventListener('dragstart', function (e) {
+          if (e.target && e.target.tagName === 'IMG') {
+            e.preventDefault();
+            return false;
+          }
+        }, true);
+
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

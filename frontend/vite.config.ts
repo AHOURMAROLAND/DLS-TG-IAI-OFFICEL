@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import javascriptObfuscator from 'vite-plugin-javascript-obfuscator'
 
 export default defineConfig({
   plugins: [
@@ -125,6 +126,70 @@ export default defineConfig({
         type: 'module',
       },
     }),
+
+    // ── Obfuscation JS — production uniquement ─────────────────────────────
+    // Rend le code source illisible : renommage variables, encodage strings,
+    // dead code injection, control flow flattening.
+    // N'est PAS appliqué en dev (trop lent, inutile).
+    ...(process.env.NODE_ENV === 'production'
+      ? [
+          javascriptObfuscator({
+            // Appliquer uniquement aux chunks JS du build final
+            include: ['**/dist/assets/*.js'],
+            exclude: [
+              // Exclure le service worker (doit rester lisible pour le navigateur)
+              '**/sw.js',
+              '**/workbox-*.js',
+            ],
+            options: {
+              // ── Niveau de protection ──────────────────────────────────────
+              // "high" : protection maximale mais build plus lent (~2x)
+              // "medium" : bon compromis performance/protection
+              optionsPreset: 'medium-obfuscation',
+
+              // Renommer les identifiants (variables, fonctions, classes)
+              identifierNamesGenerator: 'hexadecimal',
+
+              // Encoder les strings littérales en tableaux chiffrés
+              stringArray: true,
+              stringArrayEncoding: ['base64'],
+              stringArrayThreshold: 0.75,
+              stringArrayRotate: true,
+              stringArrayShuffle: true,
+              stringArrayIndexShift: true,
+              stringArrayWrappersCount: 2,
+              stringArrayWrappersType: 'function',
+
+              // Aplatir le flux de contrôle (if/else → switch obfusqué)
+              controlFlowFlattening: true,
+              controlFlowFlatteningThreshold: 0.4,
+
+              // Injecter du code mort pour noyer le vrai code
+              deadCodeInjection: true,
+              deadCodeInjectionThreshold: 0.2,
+
+              // Transformer les noms de propriétés
+              transformObjectKeys: true,
+
+              // Supprimer les commentaires
+              disableConsoleOutput: false, // garder console.error pour le debug prod
+
+              // Empêcher le débogage via DevTools
+              debugProtection: true,
+              debugProtectionInterval: 4000, // relance toutes les 4s
+
+              // Bloquer l'évaluation dans des iframes non autorisées
+              domainLock: [],
+
+              // Seed fixe pour des builds reproductibles (CI/CD)
+              seed: 0,
+
+              // Compatibilité navigateurs modernes
+              target: 'browser',
+            },
+          }),
+        ]
+      : []),
   ],
   server: {
     port: 5173,
@@ -135,9 +200,43 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
+    sourcemap: false, // Jamais de sourcemaps en prod — expose le code source
+    // Terser : minification avancée (plus agressive qu'esbuild)
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Supprimer tous les console.log/debug en production
+        drop_console: true,
+        drop_debugger: true,
+        // Optimisations agressives
+        passes: 3,
+        pure_funcs: ['console.log', 'console.debug', 'console.info', 'console.warn'],
+        // Supprimer le code mort
+        dead_code: true,
+        // Réduire les conditions constantes
+        evaluate: true,
+        // Inline les fonctions simples
+        inline: 3,
+      },
+      mangle: {
+        // Renommer les propriétés (attention : peut casser certaines libs)
+        properties: false,
+        // Renommer les variables top-level
+        toplevel: true,
+      },
+      format: {
+        // Supprimer tous les commentaires
+        comments: false,
+        // Pas de beautify
+        beautify: false,
+      },
+    },
     rollupOptions: {
       output: {
+        // Noms de fichiers avec hash pour cache-busting
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
           vendor:  ['react', 'react-dom'],
           router:  ['react-router-dom'],

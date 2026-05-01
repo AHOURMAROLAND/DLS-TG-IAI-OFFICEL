@@ -5,6 +5,14 @@
       "destination": "https://dls-hub-backend.onrender.com/api/:path*"
     },
     {
+      "source": "/join/:slug",
+      "destination": "/api/og-proxy?type=join&slug=:slug"
+    },
+    {
+      "source": "/tournament/:slug",
+      "destination": "/api/og-proxy?type=tournament&slug=:slug"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
