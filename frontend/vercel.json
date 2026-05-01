@@ -6,11 +6,11 @@
     },
     {
       "source": "/join/:slug",
-      "destination": "/api/og-proxy?type=join&slug=:slug"
+      "destination": "https://dls-hub-backend.onrender.com/og/join/:slug"
     },
     {
-      "source": "/tournament/:slug",
-      "destination": "/api/og-proxy?type=tournament&slug=:slug"
+      "source": "/tournament/:slug/:path*",
+      "destination": "https://dls-hub-backend.onrender.com/og/tournament/:slug"
     },
     {
       "source": "/(.*)",
