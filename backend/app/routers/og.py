@@ -77,11 +77,11 @@ TYPE_LABELS = {
 ELIM_LABELS  = {"single": "Simple", "double": "Double"}
 LEGS_LABELS  = {"single": "Aller simple", "double": "Aller-retour"}
 STATUS_LABELS = {
-    "registration": "📋 Inscriptions ouvertes",
-    "draw":         "🎲 Tirage en cours",
-    "in_progress":  "⚽ En cours",
-    "finished":     "🏁 Terminé",
-    "draft":        "📝 Brouillon",
+    "registration": "Inscriptions ouvertes",
+    "draw":         "Tirage en cours",
+    "in_progress":  "En cours",
+    "finished":     "Termine",
+    "draft":        "Brouillon",
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -118,17 +118,17 @@ def _build_description(t, accepted: int) -> str:
     # Places
     remaining = t.max_teams - accepted
     if remaining <= 0:
-        slots = f"🔴 Complet ({t.max_teams}/{t.max_teams})"
+        slots = f"Complet ({t.max_teams}/{t.max_teams})"
     elif t_status == "registration":
-        slots = f"🟢 {accepted}/{t.max_teams} inscrits · {remaining} place{'s' if remaining>1 else ''} dispo"
+        slots = f"{accepted}/{t.max_teams} inscrits · {remaining} place{'s' if remaining>1 else ''} dispo"
     else:
-        slots = f"👥 {accepted}/{t.max_teams} équipes"
+        slots = f"{accepted}/{t.max_teams} equipes"
 
     cta = {
-        "registration": "👉 Rejoins le tournoi sur DLS Hub !",
-        "in_progress":  "👉 Suis le tournoi en direct !",
-        "finished":     "👉 Voir les résultats !",
-    }.get(t_status, "👉 DLS Hub — Tournois Dream League Soccer 26")
+        "registration": "Rejoins le tournoi sur DLS Hub !",
+        "in_progress":  "Suis le tournoi en direct !",
+        "finished":     "Voir les resultats !",
+    }.get(t_status, "DLS Hub — Tournois Dream League Soccer 26")
 
     return f"{fmt} · {slots} · {status_label}\n{cta}"
 
@@ -230,7 +230,7 @@ async def og_join(slug: str, request: Request, db: AsyncSession = Depends(get_db
     )
     accepted = count.scalar() or 0
 
-    title       = f"🏆 {t.name}"
+    title       = f"DLS Hub — {t.name}"
     description = _build_description(t, accepted)
     image       = _og_image(t)
 
@@ -291,7 +291,7 @@ async def og_tournament(slug: str, request: Request, db: AsyncSession = Depends(
     )
     accepted = count.scalar() or 0
 
-    title       = f"🏆 {t.name}"
+    title       = f"DLS Hub — {t.name}"
     description = _build_description(t, accepted)
     image       = _og_image(t)
 

@@ -25,8 +25,8 @@ export default function BracketView() {
       qc.invalidateQueries({ queryKey: ['bracket', slug] })
       // Toast personnalisé avec le score
       if (msg.home_score !== undefined && msg.away_score !== undefined) {
-        const scoreText = `${msg.home_score} – ${msg.away_score}${msg.is_manual ? ' ✎' : ''}`
-        toast.success(`⚽ Score validé : ${scoreText}`, {
+        const scoreText = `${msg.home_score} – ${msg.away_score}${msg.is_manual ? ' (manuel)' : ''}`
+        toast.success(`Score validé : ${scoreText}`, {
           duration: 4000,
           style: {
             background: '#161830',

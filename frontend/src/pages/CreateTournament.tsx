@@ -308,7 +308,12 @@ export default function CreateTournament() {
               <Row label="Nom" value={values.name || '—'} />
               <Row label="Mode" value={TYPE_LABELS[values.tournament_type] || ''} />
               <Row label="Équipes" value={String(values.max_teams)} />
-              <Row label="Visibilité" value={values.visibility === 'private' ? '🔒 Privé' : '🌐 Public'} />
+              <Row label="Visibilité" value={
+                <span className="flex items-center gap-1">
+                  {values.visibility === 'private' ? <Lock size={12} /> : <Globe size={12} />}
+                  {values.visibility === 'private' ? 'Privé' : 'Public'}
+                </span>
+              } />
               {type === 'elimination' && <Row label="Élimination" value={values.elimination_type === 'double' ? 'Double' : 'Simple'} />}
               {type === 'championship' && <>
                 <Row label="Legs" value={values.championship_legs === 'double' ? 'Aller-retour' : 'Aller simple'} />
@@ -337,11 +342,11 @@ export default function CreateTournament() {
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: string | React.ReactNode }) {
   return (
-    <div className="flex justify-between text-sm">
+    <div className="flex justify-between text-sm items-center">
       <span style={{ color: '#64748B' }}>{label}</span>
-      <span className="font-medium text-white">{value}</span>
+      <span className="font-medium text-white flex items-center gap-1">{value}</span>
     </div>
   )
 }

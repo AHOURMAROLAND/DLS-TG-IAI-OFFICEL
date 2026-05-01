@@ -132,7 +132,9 @@ export default function JoinTournament() {
                 <div className="flex justify-between text-xs mb-1" style={{ color: '#64748B' }}>
                   <span>{accepted} joueur{accepted > 1 ? 's' : ''} inscrit{accepted > 1 ? 's' : ''}</span>
                   <span className={isFull ? 'font-bold' : ''} style={{ color: isFull ? '#F87171' : '#64748B' }}>
-                    {isFull ? '🔴 Complet' : `${tournament.max_teams} max`}
+                    {isFull
+                      ? <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-red-400" />Complet</span>
+                      : `${tournament.max_teams} max`}
                   </span>
                 </div>
                 <div className="dls-progress-bar">
@@ -156,9 +158,11 @@ export default function JoinTournament() {
           </div>
 
           {tournament.status !== 'registration' ? (
-            <div className="rounded-xl p-3 text-center text-sm mb-3"
+            <div className="rounded-xl p-3 text-center text-sm mb-3 flex items-center justify-center gap-2"
               style={{ background: 'rgba(168,11,28,0.1)', color: '#F87171', border: '1px solid rgba(168,11,28,0.2)' }}>
-              {tournament.status === 'finished' ? '🏆 Tournoi terminé' : '🔒 Inscriptions fermées'}
+              {tournament.status === 'finished'
+                ? <><Trophy size={14} /> Tournoi terminé</>
+                : <><Lock size={14} /> Inscriptions fermées</>}
             </div>
           ) : players.filter(p => p.status === 'accepted').length >= tournament.max_teams ? (
             <div className="rounded-xl p-3 text-center text-sm mb-3 flex items-center justify-center gap-2"

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Star } from 'lucide-react'
+import { Star, Footprints, Trophy, Swords } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useScorers, useMatches, useTournament } from '../hooks/useTournament'
 import { useWebSocket } from '../hooks/useWebSocket'
@@ -61,10 +61,10 @@ export default function StatisticsView() {
   })
   const clubs = Object.values(clubStats).sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga))
 
-  const TABS: { key: Tab; label: string; icon: string }[] = [
-    { key: 'scorers', label: 'Buteurs', icon: '⚽' },
-    { key: 'assists', label: 'Passeurs', icon: '👟' },
-    { key: 'clubs', label: 'Classement', icon: '🏆' },
+  const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    { key: 'scorers',  label: 'Buteurs',    icon: <Swords size={15} /> },
+    { key: 'assists',  label: 'Passeurs',   icon: <Footprints size={15} /> },
+    { key: 'clubs',    label: 'Classement', icon: <Trophy size={15} /> },
   ]
 
   return (

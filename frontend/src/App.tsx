@@ -246,7 +246,8 @@ export default function App() {
                 <a href="https://helpful-unicorn-dd021f.netlify.app/" target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
                   style={{ color: '#A78BFA', fontSize: '0.75rem', textDecoration: 'none' }}>
-                  🌐 Portfolio
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  Portfolio
                 </a>
                 <span style={{ color: '#334155', fontSize: '0.75rem' }}>
                   AHOUR MAROLAND — IAI-Togo

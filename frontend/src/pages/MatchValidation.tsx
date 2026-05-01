@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Edit3, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Edit3, CheckCircle, Clock, ChevronDown, ChevronUp, AlertTriangle, Target } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useMatches } from '../hooks/useTournament'
@@ -246,8 +246,8 @@ export default function MatchValidation() {
             <p className="text-sm font-semibold text-white flex items-center gap-2 mb-2">
               <Edit3 size={14} style={{ color: '#F87171' }} /> Score manuel
             </p>
-            <div className="rounded-lg p-2 mb-3 text-xs" style={{ background: 'rgba(168,11,28,0.1)', color: '#F87171' }}>
-              ⚠️ Apparaîtra en rouge pour tous les participants
+            <div className="rounded-lg p-2 mb-3 text-xs flex items-center gap-1.5" style={{ background: 'rgba(168,11,28,0.1)', color: '#F87171' }}>
+              <AlertTriangle size={12} /> Apparaîtra en rouge pour tous les participants
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -299,8 +299,8 @@ function GoalsSummary({ goals, color }: { goals: GoalEvent[]; color: string }) {
   return (
     <div className="flex flex-wrap gap-1">
       {goals.map((g, i) => (
-        <span key={i} className="text-xs" style={{ color }}>
-          ⚽ {g.scorer} {g.minute}'
+        <span key={i} className="text-xs flex items-center gap-1" style={{ color }}>
+          <Target size={10} /> {g.scorer} {g.minute}'
         </span>
       ))}
     </div>
@@ -377,8 +377,8 @@ function GoalList({ goals, side }: { goals: GoalEvent[]; side: 'home' | 'away' }
     <div className={`flex flex-col gap-1 ${side === 'away' ? 'items-end text-right' : ''}`}>
       {goals.map((g, i) => (
         <div key={i}>
-          <p className="text-xs font-medium" style={{ color }}>
-            ⚽ {g.minute}' {g.scorer}
+          <p className="text-xs font-medium flex items-center gap-1" style={{ color }}>
+            <Target size={10} /> {g.minute}' {g.scorer}
             {g.type !== 'Pied' && <span style={{ color: '#94A3B8' }}> ({g.type})</span>}
           </p>
           {g.assister && (

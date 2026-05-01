@@ -90,8 +90,8 @@ const Header: React.FC = () => {
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#0F1020' }}>
           <div className="dls-container py-3 flex flex-col gap-1">
             <Link to="/tournaments" onClick={() => setOpen(false)}
-              className="dls-btn dls-btn-ghost text-left justify-start" style={{ color: '#94A3B8' }}>
-              🏆 Tournois
+              className="dls-btn dls-btn-ghost text-left justify-start flex items-center gap-2" style={{ color: '#94A3B8' }}>
+              <Trophy size={14} /> Tournois
             </Link>
             <Link to="/join" onClick={() => setOpen(false)}
               className="dls-btn dls-btn-ghost text-left justify-start" style={{ color: '#94A3B8' }}>

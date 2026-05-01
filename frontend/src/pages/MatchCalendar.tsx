@@ -21,7 +21,7 @@ export default function MatchCalendar() {
     if (msg.event === 'match_validated') {
       qc.invalidateQueries({ queryKey: ['matches', slug] })
       if (msg.home_score !== undefined) {
-        toast.success(`⚽ ${msg.home_score} – ${msg.away_score}${msg.is_manual ? ' ✎' : ''}`, {
+        toast.success(`${msg.home_score} – ${msg.away_score}${msg.is_manual ? ' (manuel)' : ''}`, {
           duration: 3000,
           style: { background: '#161830', color: '#fff', border: '1px solid rgba(22,163,74,0.4)' },
         })

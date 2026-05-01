@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, Users, Settings, Shuffle, CheckSquare, Copy, Check, ArrowRight, UserPlus, Upload, Lock, UserCheck, Search, X } from 'lucide-react'
+import { Trophy, Users, Settings, Shuffle, CheckSquare, Copy, Check, ArrowRight, UserPlus, Upload, Lock, UserCheck, Search, X, UserCircle, Swords, Dices } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTournament, usePlayers, useMatches } from '../hooks/useTournament'
@@ -342,7 +342,7 @@ export default function CreatorDashboard() {
             {activity.map(a => (
               <div key={a.id} className="flex items-center gap-3 text-sm">
                 <span style={{ color: a.type === 'registration' ? '#4D8EFF' : a.type === 'match' ? '#4ADE80' : '#A78BFA' }}>
-                  {a.type === 'registration' ? '👤' : a.type === 'match' ? '⚽' : a.type === 'draw' ? '🎲' : '✅'}
+                  {a.type === 'registration' ? <UserCircle size={14} /> : a.type === 'match' ? <Swords size={14} /> : a.type === 'draw' ? <Dices size={14} /> : <Check size={14} />}
                 </span>
                 <span className="flex-1 text-white text-xs">{a.text}</span>
                 <span className="text-xs flex-shrink-0" style={{ color: '#64748B' }}>
