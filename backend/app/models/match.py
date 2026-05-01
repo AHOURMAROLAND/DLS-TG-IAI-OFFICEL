@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Enum, JSON
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Enum, JSON, Index
 from sqlalchemy.sql import func
 from ..database import Base
 
@@ -24,9 +24,9 @@ class Match(Base):
     __tablename__ = "matches"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tournament_id = Column(String(36), ForeignKey("tournaments.id"), nullable=False)
-    home_player_id = Column(String(36), ForeignKey("players.id"), nullable=False)
-    away_player_id = Column(String(36), ForeignKey("players.id"), nullable=False)
+    tournament_id = Column(String(36), ForeignKey("tournaments.id"), nullable=False, index=True)
+    home_player_id = Column(String(36), ForeignKey("players.id"), nullable=False, index=True)
+    away_player_id = Column(String(36), ForeignKey("players.id"), nullable=False, index=True)
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
     home_score_agg = Column(Integer, nullable=True)
@@ -35,7 +35,7 @@ class Match(Base):
     phase = Column(Enum(MatchPhase), nullable=False)
     round_number = Column(Integer, default=1)
     group_id = Column(String(5), nullable=True)
-    status = Column(Enum(MatchStatus), default=MatchStatus.SCHEDULED)
+    status = Column(Enum(MatchStatus), default=MatchStatus.SCHEDULED, index=True)
     dll_match_timestamp = Column(String(20), nullable=True)
     stats_data = Column(JSON, nullable=True)
     home_scorers = Column(JSON, nullable=True)

@@ -28,6 +28,7 @@ export default function PlayerRegistration() {
   const [playerInfo, setPlayerInfo] = useState<PlayerInfo | null>(null)
   const [verifying, setVerifying] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [honeypot, setHoneypot] = useState('')
 
   // Pré-remplissage depuis le profil si l'user a un idx lié (v2)
   const hasProfileIdx = !!(user?.dll_idx)
@@ -92,6 +93,12 @@ export default function PlayerRegistration() {
   }
 
   const submit = async () => {
+    // Honeypot — si rempli, c'est un bot
+    if (honeypot) {
+      // Simuler un succès pour ne pas alerter le bot
+      await new Promise(r => setTimeout(r, 1500))
+      return
+    }
     if (!playerInfo) { toast.error('Vérifiez votre idx DLS d\'abord'); return }
     if (!pseudo.trim()) { toast.error('Entrez un pseudo'); return }
     if (!slug) return
@@ -247,6 +254,17 @@ export default function PlayerRegistration() {
           {submitting ? <span className="dls-spinner dls-spinner-sm" /> : null}
           {submitting ? 'Envoi...' : 'Envoyer ma demande'}
         </button>
+
+        {/* Honeypot — champ invisible pour les bots. Ne jamais remplir ce champ. */}
+        <input
+          type="text"
+          name="website"
+          autoComplete="off"
+          tabIndex={-1}
+          aria-hidden="true"
+          style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }}
+          onChange={(e) => setHoneypot(e.target.value)}
+        />
       </div>
     </div>
   )

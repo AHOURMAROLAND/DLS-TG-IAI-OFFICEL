@@ -120,6 +120,33 @@ export default function CreateTournament() {
 
   const validSizes = type === 'elimination' ? ELIM_SIZES : type === 'championship' ? CHAMP_SIZES : GROUP_SIZES
 
+  // ── Validation par étape ────────────────────────────────────────────────
+  const validateStep0 = (): string | null => {
+    const name = values.name?.trim() ?? ''
+    if (!name) return 'Le nom du tournoi est obligatoire'
+    if (name.length < 3) return 'Le nom doit contenir au moins 3 caractères'
+    if (!values.tournament_type) return 'Choisissez un mode de tournoi'
+    return null
+  }
+
+  const validateStep1 = (): string | null => {
+    if (!values.max_teams || values.max_teams < 4) return 'Choisissez un nombre d\'équipes'
+    if (type === 'groups' && !selectedSuggestion) return 'Sélectionnez une configuration de poules'
+    return null
+  }
+
+  const handleNextStep0 = () => {
+    const err = validateStep0()
+    if (err) { toast.error(err); return }
+    setStep(1)
+  }
+
+  const handleNextStep1 = () => {
+    const err = validateStep1()
+    if (err) { toast.error(err); return }
+    setStep(2)
+  }
+
   return (
     <div className="dls-page max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-8">
@@ -154,7 +181,10 @@ export default function CreateTournament() {
             <div>
               <label className="dls-label">Nom du tournoi *</label>
               <input {...register('name')} className={`dls-input ${errors.name ? 'dls-input-error' : ''}`} placeholder="Ex: Tournoi de printemps 2026" />
-              {errors.name && <p className="text-xs mt-1" style={{ color: '#F87171' }}>{errors.name.message}</p>}
+              {errors.name
+                ? <p className="text-xs mt-1" style={{ color: '#F87171' }}>{errors.name.message}</p>
+                : <p className="text-xs mt-1" style={{ color: '#64748B' }}>Minimum 3 caractères — obligatoire</p>
+              }
             </div>
             <div>
               <label className="dls-label">Mode de tournoi *</label>
@@ -192,7 +222,7 @@ export default function CreateTournament() {
                 ))}
               </div>
             </div>
-            <button type="button" onClick={() => setStep(1)} className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
+            <button type="button" onClick={handleNextStep0} className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2">
               Suivant <ChevronRight size={16} />
             </button>
           </div>
@@ -265,7 +295,7 @@ export default function CreateTournament() {
             )}
             <div className="flex gap-3">
               <button type="button" onClick={() => setStep(0)} className="dls-btn dls-btn-secondary flex items-center gap-1"><ChevronLeft size={16} /> Retour</button>
-              <button type="button" onClick={() => { if (type === 'groups' && !selectedSuggestion) { toast.error('Sélectionnez une configuration de poules'); return } setStep(2) }} className="dls-btn dls-btn-primary flex-1 flex items-center justify-center gap-2">Suivant <ChevronRight size={16} /></button>
+              <button type="button" onClick={handleNextStep1} className="dls-btn dls-btn-primary flex-1 flex items-center justify-center gap-2">Suivant <ChevronRight size={16} /></button>
             </div>
           </div>
         )}

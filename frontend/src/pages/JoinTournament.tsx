@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Search, Trophy, Users, ArrowLeft, CheckCircle, Settings, QrCode } from 'lucide-react'
+import { Search, Trophy, Users, ArrowLeft, CheckCircle, Settings, QrCode, Lock } from 'lucide-react'
 import api from '../lib/api'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
-import type { Tournament } from '../lib/api'
+import type { Tournament, Player } from '../lib/api'
 import QRScanner from '../components/ui/QRScanner'
 
 export default function JoinTournament() {
@@ -13,6 +13,7 @@ export default function JoinTournament() {
   const { user } = useAuth()
   const [code, setCode] = useState(paramSlug?.toUpperCase() ?? '')
   const [tournament, setTournament] = useState<Tournament | null>(null)
+  const [players, setPlayers] = useState<Player[]>([])
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
   const [showScanner, setShowScanner] = useState(false)
@@ -26,6 +27,7 @@ export default function JoinTournament() {
     setChecking(true)
     setError('')
     setTournament(null)
+    setPlayers([])
     try {
       const t = await api.getTournament(slug.toLowerCase())
       if (t.status === 'finished') {
@@ -33,6 +35,13 @@ export default function JoinTournament() {
         return
       }
       setTournament(t)
+      // Charger les joueurs pour afficher le remplissage
+      try {
+        const ps = await api.getTournamentPlayers(slug.toLowerCase())
+        setPlayers(ps)
+      } catch {
+        // Non bloquant
+      }
     } catch {
       setError('Tournoi introuvable — vérifie le code')
     } finally {
@@ -114,6 +123,29 @@ export default function JoinTournament() {
             </div>
           </div>
 
+          {/* Remplissage du tournoi */}
+          {(() => {
+            const accepted = players.filter(p => p.status === 'accepted').length
+            const isFull = accepted >= tournament.max_teams
+            return (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs mb-1" style={{ color: '#64748B' }}>
+                  <span>{accepted} joueur{accepted > 1 ? 's' : ''} inscrit{accepted > 1 ? 's' : ''}</span>
+                  <span className={isFull ? 'font-bold' : ''} style={{ color: isFull ? '#F87171' : '#64748B' }}>
+                    {isFull ? '🔴 Complet' : `${tournament.max_teams} max`}
+                  </span>
+                </div>
+                <div className="dls-progress-bar">
+                  <div className="dls-progress-fill"
+                    style={{
+                      width: `${Math.min((accepted / tournament.max_teams) * 100, 100)}%`,
+                      background: isFull ? '#F87171' : undefined,
+                    }} />
+                </div>
+              </div>
+            )
+          })()}
+
           <div className="grid grid-cols-2 gap-3 mb-5">
             <Stat label="Équipes max" value={String(tournament.max_teams)} />
             <Stat label="Statut" value={
@@ -127,6 +159,11 @@ export default function JoinTournament() {
             <div className="rounded-xl p-3 text-center text-sm mb-3"
               style={{ background: 'rgba(168,11,28,0.1)', color: '#F87171', border: '1px solid rgba(168,11,28,0.2)' }}>
               {tournament.status === 'finished' ? '🏆 Tournoi terminé' : '🔒 Inscriptions fermées'}
+            </div>
+          ) : players.filter(p => p.status === 'accepted').length >= tournament.max_teams ? (
+            <div className="rounded-xl p-3 text-center text-sm mb-3 flex items-center justify-center gap-2"
+              style={{ background: 'rgba(168,11,28,0.1)', color: '#F87171', border: '1px solid rgba(168,11,28,0.2)' }}>
+              <Lock size={14} /> Tournoi complet — plus de place disponible
             </div>
           ) : (
             <button onClick={() => navigate(`/register/${tournament.slug}`)}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -9,6 +9,7 @@ from ..models.user import User
 from ..schemas.tournament import TournamentOut
 from ..schemas.match import DrawRequest, DrawConfirmRequest
 from ..services.session_service import generate_tournament_slug
+from ..services.audit_service import audit
 from ..services.draw_service import (
     balanced_draw, elimination_draw, championship_draw,
     create_group_matches, create_elimination_matches, create_championship_matches,
@@ -16,6 +17,7 @@ from ..services.draw_service import (
 from ..models.match import MatchPhase
 from ..websocket.manager import manager
 from ..utils.logger import logger
+from ..utils.sanitize import sanitize_tournament_name
 from ..dependencies import require_auth, optional_auth
 
 router = APIRouter()
@@ -73,10 +75,16 @@ class TournamentCreateJSON(PydanticModel):
 @router.post("/json")
 async def create_tournament_json(
     body: TournamentCreateJSON,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
     """Crée un tournoi sans logo — accepte JSON."""
+    # Sanitisation XSS
+    name = sanitize_tournament_name(body.name)
+    if not name or len(name) < 3:
+        raise HTTPException(400, "Le nom du tournoi doit contenir au moins 3 caractères")
+
     slug = generate_tournament_slug()
     from ..services.tournament_config import validate_tournament_size
     validation = validate_tournament_size(body.tournament_type, body.max_teams, body.elimination_type)
@@ -85,7 +93,7 @@ async def create_tournament_json(
             raise HTTPException(400, validation.error or "Nombre d'équipes invalide")
 
     tournament = Tournament(
-        slug=slug, name=body.name, logo_data=None, logo_content_type=None,
+        slug=slug, name=name, logo_data=None, logo_content_type=None,
         tournament_type=body.tournament_type, elimination_type=body.elimination_type,
         championship_legs=body.championship_legs, max_teams=body.max_teams,
         group_count=body.group_count, teams_per_group=body.teams_per_group,
@@ -94,6 +102,16 @@ async def create_tournament_json(
         visibility=body.visibility if body.visibility in ("public", "private") else "public",
     )
     db.add(tournament)
+
+    client_ip = request.client.host if request.client else None
+    await audit(
+        db,
+        user_id=str(current_user.id),
+        action="tournament_created",
+        details={"name": name, "type": body.tournament_type, "max_teams": body.max_teams},
+        ip_address=client_ip,
+    )
+
     await db.commit()
     await db.refresh(tournament)
     logger.info(f"Tournoi créé par {current_user.pseudo}: {tournament.name} ({tournament.slug})")
@@ -113,10 +131,16 @@ async def create_tournament(
     elimination_round: str = Form(""),
     visibility: str = Form("public"),
     logo: UploadFile = File(None),
+    request: Request = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
     """Crée un tournoi — authentification requise."""
+    # Sanitisation XSS
+    name = sanitize_tournament_name(name)
+    if not name or len(name) < 3:
+        raise HTTPException(400, "Le nom du tournoi doit contenir au moins 3 caractères")
+
     slug = generate_tournament_slug()
 
     from ..services.tournament_config import validate_tournament_size
@@ -155,6 +179,16 @@ async def create_tournament(
         visibility=visibility if visibility in ("public", "private") else "public",
     )
     db.add(tournament)
+
+    client_ip = request.client.host if request and request.client else None
+    await audit(
+        db,
+        user_id=str(current_user.id),
+        action="tournament_created",
+        details={"name": name, "type": tournament_type, "max_teams": max_teams},
+        ip_address=client_ip,
+    )
+
     await db.commit()
     await db.refresh(tournament)
 
@@ -265,6 +299,7 @@ async def update_tournament(
     name: str = Form(None),
     visibility: str = Form(None),
     logo: UploadFile = File(None),
+    request: Request = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
@@ -277,10 +312,15 @@ async def update_tournament(
     if t.status == TournamentStatus.FINISHED:
         raise HTTPException(400, "Impossible de modifier un tournoi terminé")
 
+    changes: dict = {}
     if name and name.strip():
-        t.name = name.strip()
+        clean_name = sanitize_tournament_name(name)
+        if clean_name:
+            t.name = clean_name
+            changes["name"] = clean_name
     if visibility and visibility in ("public", "private"):
         t.visibility = visibility
+        changes["visibility"] = visibility
     if logo:
         allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
         if logo.content_type not in allowed_types:
@@ -290,6 +330,20 @@ async def update_tournament(
             raise HTTPException(400, "L'image ne doit pas dépasser 5MB.")
         t.logo_data = content
         t.logo_content_type = logo.content_type
+        changes["logo"] = "updated"
+
+    if changes:
+        client_ip = request.client.host if request and request.client else None
+        await audit(
+            db,
+            user_id=str(current_user.id),
+            action="tournament_updated",
+            tournament_id=str(t.id),
+            target_type="tournament",
+            target_id=str(t.id),
+            details=changes,
+            ip_address=client_ip,
+        )
 
     await db.commit()
     await db.refresh(t)
@@ -299,6 +353,7 @@ async def update_tournament(
 @router.delete("/{slug}")
 async def delete_tournament(
     slug: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
@@ -311,6 +366,18 @@ async def delete_tournament(
         raise HTTPException(404, "Tournoi introuvable")
     if t.creator_id != current_user.id:
         raise HTTPException(403, "Accès refusé")
+
+    client_ip = request.client.host if request.client else None
+    await audit(
+        db,
+        user_id=str(current_user.id),
+        action="tournament_deleted",
+        tournament_id=str(t.id),
+        target_type="tournament",
+        target_id=str(t.id),
+        details={"name": t.name, "slug": t.slug},
+        ip_address=client_ip,
+    )
 
     await db.execute(sa_delete(Match).where(Match.tournament_id == t.id))
     await db.execute(sa_delete(Player).where(Player.tournament_id == t.id))
@@ -339,8 +406,17 @@ async def generate_draw(
         select(Player).where(Player.tournament_id == t.id, Player.status == PlayerStatus.ACCEPTED)
     )
     players = players_result.scalars().all()
+
+    # ── Blocage strict : nombre de joueurs insuffisant ─────────────────────
     if len(players) < 2:
-        raise HTTPException(400, "Il faut au moins 2 joueurs acceptés")
+        raise HTTPException(400, "Il faut au moins 2 joueurs acceptés pour générer le tirage")
+
+    if len(players) < t.max_teams:
+        raise HTTPException(
+            400,
+            f"Le tournoi n'est pas complet : {len(players)}/{t.max_teams} joueurs acceptés. "
+            f"Acceptez tous les joueurs avant de lancer le tirage."
+        )
 
     players_data = [
         {"id": str(p.id), "pseudo": p.pseudo, "team_name": p.team_name,
@@ -367,6 +443,7 @@ async def generate_draw(
 async def confirm_draw(
     slug: str,
     body: DrawConfirmRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
@@ -395,6 +472,20 @@ async def confirm_draw(
         await create_elimination_matches(str(t.id), pairs, phase, db)
 
     t.status = TournamentStatus.IN_PROGRESS
+
+    # Audit log
+    client_ip = request.client.host if request.client else None
+    await audit(
+        db,
+        user_id=str(current_user.id),
+        action="draw_confirmed",
+        tournament_id=str(t.id),
+        target_type="tournament",
+        target_id=str(t.id),
+        details={"tournament_type": t.tournament_type},
+        ip_address=client_ip,
+    )
+
     await db.commit()
     await manager.broadcast(str(t.id), {"event": "draw_confirmed", "tournament_id": str(t.id)})
     return {"message": "Tirage confirmé, tournoi lancé"}

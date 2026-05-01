@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..database import get_db
@@ -7,11 +7,29 @@ from ..models.tournament import Tournament, TournamentStatus
 from ..models.user import User
 from ..schemas.player import PlayerDecision, PlayerOut, AddPlayerManualRequest
 from ..services.tracker_service import fetch_player_data, parse_player_info, get_all_recent_matches
+from ..services.audit_service import audit
 from ..websocket.manager import manager
 from ..utils.logger import logger
+from ..utils.sanitize import sanitize_pseudo
 from ..dependencies import require_auth, optional_auth
 
 router = APIRouter()
+
+# ── Honeypot ──────────────────────────────────────────────────────────────────
+
+@router.post("/register-form")
+async def honeypot_register(request: Request):
+    """
+    Champ honeypot — ce endpoint ne doit jamais être appelé par un humain.
+    Tout appel ici est un bot ou un scraper. On logue l'IP et on retourne 200
+    pour ne pas alerter le bot qu'il a été détecté.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    logger.warning(f"HONEYPOT triggered from IP {client_ip} — possible bot/scraper")
+    # Réponse lente simulée pour ralentir les bots
+    import asyncio
+    await asyncio.sleep(3)
+    return {"status": "ok"}
 
 
 @router.get("/search-user")
@@ -60,6 +78,11 @@ async def register_player(
         raise HTTPException(404, "Tournoi introuvable")
     if t.status != TournamentStatus.REGISTRATION:
         raise HTTPException(400, "Les inscriptions sont fermées")
+
+    # Sanitisation XSS
+    pseudo = sanitize_pseudo(pseudo)
+    if not pseudo:
+        raise HTTPException(400, "Pseudo invalide")
 
     # Vérifier que le tournoi n'est pas complet (joueurs acceptés)
     accepted_count_result = await db.execute(
@@ -228,6 +251,7 @@ async def register_creator(
 async def add_player_manually(
     slug: str,
     body: AddPlayerManualRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
@@ -246,7 +270,19 @@ async def add_player_manually(
     if t.status != TournamentStatus.REGISTRATION:
         raise HTTPException(400, "Les inscriptions sont fermées")
 
+    # Sanitisation XSS
+    pseudo = sanitize_pseudo(body.pseudo)
+    if not pseudo:
+        raise HTTPException(400, "Pseudo invalide")
+
     dll_idx = body.dll_idx.strip().lower()
+
+    # Vérifier que le tournoi n'est pas complet
+    accepted_count_result = await db.execute(
+        select(Player).where(Player.tournament_id == t.id, Player.status == PlayerStatus.ACCEPTED)
+    )
+    if len(accepted_count_result.scalars().all()) >= t.max_teams:
+        raise HTTPException(400, f"Le tournoi est complet ({t.max_teams}/{t.max_teams} équipes)")
 
     # Vérifier unicité idx dans le tournoi
     existing_idx = await db.execute(
@@ -281,7 +317,7 @@ async def add_player_manually(
     player = Player(
         tournament_id=t.id,
         user_id=linked_user_id,
-        pseudo=body.pseudo.strip(),
+        pseudo=pseudo,
         dll_idx=dll_idx,
         team_name=info["team_name"],
         dll_division=info["division"],
@@ -292,14 +328,27 @@ async def add_player_manually(
         is_creator=False,
     )
     db.add(player)
+
+    # Audit log
+    client_ip = request.client.host if request.client else None
+    await audit(
+        db,
+        user_id=str(current_user.id),
+        action="player_added_manually",
+        tournament_id=str(t.id),
+        target_type="player",
+        details={"pseudo": pseudo, "dll_idx": dll_idx, "is_guest": linked_user_id is None},
+        ip_address=client_ip,
+    )
+
     await db.commit()
     await db.refresh(player)
 
     await manager.broadcast(str(t.id), {
         "event": "new_registration",
-        "player": {"pseudo": body.pseudo, "team_name": info["team_name"], "division": info["division"]},
+        "player": {"pseudo": pseudo, "team_name": info["team_name"], "division": info["division"]},
     })
-    logger.info(f"Joueur ajouté manuellement par {current_user.pseudo}: {body.pseudo} ({dll_idx}) dans {slug}")
+    logger.info(f"Joueur ajouté manuellement par {current_user.pseudo}: {pseudo} ({dll_idx}) dans {slug}")
     return {
         "player_id": str(player.id),
         "status": player.status.value,
@@ -323,6 +372,7 @@ async def get_player_logo(player_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/decision")
 async def player_decision(
     body: PlayerDecision,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_auth),
 ):
@@ -364,6 +414,20 @@ async def player_decision(
         player.status = PlayerStatus.REJECTED
     else:
         raise HTTPException(400, "Décision invalide")
+
+    # Audit log
+    client_ip = request.client.host if request.client else None
+    action = "player_accepted" if body.decision == "accept" else "player_rejected"
+    await audit(
+        db,
+        user_id=str(current_user.id),
+        action=action,
+        tournament_id=str(t.id),
+        target_type="player",
+        target_id=str(player.id),
+        details={"pseudo": player.pseudo, "dll_idx": player.dll_idx},
+        ip_address=client_ip,
+    )
 
     await db.commit()
     await manager.broadcast(str(t.id), {

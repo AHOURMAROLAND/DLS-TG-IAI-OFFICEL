@@ -21,6 +21,8 @@ export default function DrawGeneration() {
   const confirmed = t?.status === 'in_progress' || t?.status === 'finished'
 
   const accepted = players.filter(p => p.status === 'accepted')
+  const isFull = t ? accepted.length >= t.max_teams : false
+  const missingPlayers = t ? Math.max(0, t.max_teams - accepted.length) : 0
 
   const generate = async () => {
     if (!slug) return
@@ -114,6 +116,24 @@ export default function DrawGeneration() {
         </div>
       </div>
 
+      {/* Avertissement si tournoi pas complet */}
+      {t && !confirmed && !isFull && (
+        <div className="dls-card p-4 mb-5 flex items-start gap-3"
+          style={{ background: 'rgba(245,166,35,0.08)', borderColor: 'rgba(245,166,35,0.3)' }}>
+          <span className="text-lg flex-shrink-0">⚠️</span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#F5A623' }}>
+              Tournoi incomplet — tirage bloqué
+            </p>
+            <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+              {accepted.length}/{t.max_teams} joueurs acceptés.
+              Il manque encore <strong style={{ color: '#F5A623' }}>{missingPlayers} joueur{missingPlayers > 1 ? 's' : ''}</strong>.
+              Acceptez tous les participants avant de lancer le tirage.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Résultat tirage */}
       {draw && (
         <div className="mb-5">
@@ -129,8 +149,9 @@ export default function DrawGeneration() {
       {/* Actions */}
       {!confirmed ? (
         <div className="flex gap-3">
-          <button onClick={generate} disabled={generating || accepted.length < 2}
-            className="dls-btn dls-btn-secondary flex-1 flex items-center justify-center gap-2">
+          <button onClick={generate} disabled={generating || !isFull}
+            className="dls-btn dls-btn-secondary flex-1 flex items-center justify-center gap-2"
+            title={!isFull ? `Il manque ${missingPlayers} joueur(s)` : undefined}>
             {generating ? <span className="dls-spinner dls-spinner-sm" /> : <RotateCcw size={16} />}
             {generating ? 'Génération...' : draw ? 'Régénérer' : 'Générer le tirage'}
           </button>
