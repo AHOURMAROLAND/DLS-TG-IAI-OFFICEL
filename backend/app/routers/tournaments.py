@@ -360,6 +360,8 @@ async def delete_tournament(
     from ..models.match import Match
     from ..models.audit_log import AuditLog
     from sqlalchemy import delete as sa_delete
+    import uuid as _uuid
+    from datetime import datetime, timezone
 
     result = await db.execute(select(Tournament).where(Tournament.slug == slug))
     t = result.scalar_one_or_none()
@@ -368,26 +370,36 @@ async def delete_tournament(
     if t.creator_id != current_user.id:
         raise HTTPException(403, "Accès refusé")
 
-    # Audit avant suppression (on garde la trace dans les logs user sans tournament_id)
+    tournament_name = t.name
+    tournament_slug = t.slug
+    tournament_id   = str(t.id)
     client_ip = request.client.host if request.client else None
-    await audit(
-        db,
+
+    # Supprimer dans l'ordre strict pour respecter les FK :
+    # 1. audit_logs liés au tournoi (FK tournament_id)
+    # 2. matches
+    # 3. players
+    # 4. le tournoi lui-même
+    await db.execute(sa_delete(AuditLog).where(AuditLog.tournament_id == tournament_id))
+    await db.execute(sa_delete(Match).where(Match.tournament_id == tournament_id))
+    await db.execute(sa_delete(Player).where(Player.tournament_id == tournament_id))
+    await db.execute(sa_delete(Tournament).where(Tournament.id == tournament_id))
+
+    # Écrire l'audit APRÈS la suppression, sans tournament_id (plus de FK)
+    log = AuditLog(
+        id=str(_uuid.uuid4()),
         user_id=str(current_user.id),
+        tournament_id=None,
         action="tournament_deleted",
-        tournament_id=None,  # On met None pour éviter la FK violation lors du delete
         target_type="tournament",
-        target_id=str(t.id),
-        details={"name": t.name, "slug": t.slug},
+        target_id=tournament_id,
+        details={"name": tournament_name, "slug": tournament_slug},
         ip_address=client_ip,
     )
+    db.add(log)
 
-    # Supprimer dans l'ordre : audit_logs → matches → players → tournament
-    await db.execute(sa_delete(AuditLog).where(AuditLog.tournament_id == t.id))
-    await db.execute(sa_delete(Match).where(Match.tournament_id == t.id))
-    await db.execute(sa_delete(Player).where(Player.tournament_id == t.id))
-    await db.delete(t)
     await db.commit()
-    logger.info(f"Tournoi supprimé par {current_user.pseudo}: {t.name} ({t.slug})")
+    logger.info(f"Tournoi supprimé par {current_user.pseudo}: {tournament_name} ({tournament_slug})")
     return {"message": "Tournoi supprimé"}
 
 
