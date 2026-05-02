@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, Lock } from 'lucide-react'
+import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, Lock, UserCheck } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
+import { useQuery } from '@tanstack/react-query'
 import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
+import api from '../lib/api'
 import type { Tournament } from '../lib/api'
 import { SkeletonMatchList } from '../components/ui/Skeleton'
 
@@ -21,9 +23,18 @@ export default function Home() {
     ? tournamentList.filter(t => t.creator_id === user.id)
     : []
 
-  // Tous les autres
+  // Tournois où je participe (pas créateur)
+  const { data: participating = [] } = useQuery({
+    queryKey: ['participating-tournaments'],
+    queryFn: () => api.getParticipatingTournaments(),
+    enabled: !!user,
+    staleTime: 30_000,
+  })
+  const participatingOther = participating.filter(t => t.creator_id !== user?.id)
+
+  // Tous les autres (publics, pas les miens)
   const otherTournaments = user
-    ? tournamentList.filter(t => t.creator_id !== user.id)
+    ? tournamentList.filter(t => t.creator_id !== user.id && !participatingOther.find(p => p.id === t.id))
     : tournamentList
 
   const handleJoin = () => {
@@ -97,6 +108,22 @@ export default function Home() {
           <div className="flex flex-col gap-3">
             {myTournaments.map(t => (
               <TournamentRow key={t.id} tournament={t} role="owner" onClick={() => handleTournamentClick(t)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Mes participations ── */}
+      {participatingOther.length > 0 && (
+        <section className="max-w-3xl mx-auto mb-8">
+          <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+            <UserCheck size={16} style={{ color: '#4ADE80' }} />
+            Mes participations
+            <span className="dls-badge dls-badge-green">{participatingOther.length}</span>
+          </h2>
+          <div className="flex flex-col gap-3">
+            {participatingOther.map(t => (
+              <TournamentRow key={t.id} tournament={t} role="player" onClick={() => handleTournamentClick(t)} />
             ))}
           </div>
         </section>

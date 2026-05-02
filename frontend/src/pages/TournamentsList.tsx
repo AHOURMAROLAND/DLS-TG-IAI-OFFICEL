@@ -119,8 +119,9 @@ export default function TournamentsList() {
                       Gérer
                     </button>
                     {(t.status === 'registration' || t.status === 'draft') && (
-                      <button onClick={() => deleteTournament(t)}
-                        className="dls-btn dls-btn-danger dls-btn-sm">
+                      <button onClick={e => { e.stopPropagation(); deleteTournament(t) }}
+                        className="dls-btn dls-btn-danger dls-btn-sm"
+                        title="Supprimer le tournoi">
                         <Trash2 size={13} />
                       </button>
                     )}
