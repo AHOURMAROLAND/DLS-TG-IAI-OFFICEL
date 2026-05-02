@@ -35,7 +35,7 @@ export default function JoinTournament() {
         return
       }
       setTournament(t)
-      // Charger les joueurs pour afficher le remplissage
+      // Charger les joueurs pour afficher le remplissage et détecter si déjà inscrit
       try {
         const ps = await api.getTournamentPlayers(slug.toLowerCase())
         setPlayers(ps)

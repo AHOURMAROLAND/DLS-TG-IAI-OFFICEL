@@ -162,7 +162,7 @@ export default function TournamentsList() {
               {participating.map(t => (
                 <div key={t.id}
                   onClick={() => {
-                    if (t.status === 'registration') navigate(`/join/${t.slug}`)
+                    if (t.status === 'registration') navigate(`/tournament-public/${t.slug}`)
                     else if (t.status === 'finished') navigate(`/tournament/${t.slug}/finished`)
                     else navigate(`/tournament/${t.slug}/bracket`)
                   }}

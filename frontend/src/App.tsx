@@ -31,6 +31,7 @@ const PlayerProfile         = lazy(() => import('./pages/PlayerProfile'))
 const TournamentFinished    = lazy(() => import('./pages/TournamentFinished'))
 const SystemStates          = lazy(() => import('./pages/SystemStates'))
 const TournamentDetail      = lazy(() => import('./pages/TournamentDetail'))
+const TournamentPublic      = lazy(() => import('./pages/TournamentPublic'))
 
 // ── Fallback de chargement ──────────────────────────────────────────────────
 function PageLoader() {
@@ -209,6 +210,7 @@ export default function App() {
                 <Route path="/tournament/:slug/calendar"          element={<MatchCalendar />} />
                 <Route path="/tournament/:slug/player/:playerId"  element={<PlayerProfile />} />
                 <Route path="/tournament/:slug"                   element={<TournamentDetail />} />
+                <Route path="/tournament-public/:slug"            element={<TournamentPublic />} />
 
                 {/* GROUPE E */}
                 <Route path="/tournament/:slug/finished" element={<TournamentFinished />} />

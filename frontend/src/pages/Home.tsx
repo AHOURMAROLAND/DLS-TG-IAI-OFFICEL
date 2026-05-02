@@ -48,17 +48,17 @@ export default function Home() {
       navigate(`/dashboard/${t.slug}`)
       return
     }
-    // Inscriptions ouvertes → page rejoindre
-    if (t.status === 'registration') {
-      navigate(`/join/${t.slug}`)
-      return
-    }
-    // Tournoi terminé → page résultats
+    // Tournoi terminé → résultats
     if (t.status === 'finished') {
       navigate(`/tournament/${t.slug}/finished`)
       return
     }
-    // En cours ou tirage → bracket/vue publique
+    // Inscriptions ouvertes OU déjà inscrit → page publique avec CTA adapté
+    if (t.status === 'registration') {
+      navigate(`/tournament-public/${t.slug}`)
+      return
+    }
+    // En cours → bracket
     navigate(`/tournament/${t.slug}/bracket`)
   }
 

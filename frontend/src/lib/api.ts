@@ -71,6 +71,7 @@ export interface Player {
   group_id?: string | null
   is_creator: boolean
   registered_at?: string | null
+  user_id?: string | null
 }
 
 export interface RecentMatch {
