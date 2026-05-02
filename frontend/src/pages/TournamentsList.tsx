@@ -161,7 +161,11 @@ export default function TournamentsList() {
             <div className="flex flex-col gap-3">
               {participating.map(t => (
                 <div key={t.id}
-                  onClick={() => navigate(`/tournament/${t.slug}/bracket`)}
+                  onClick={() => {
+                    if (t.status === 'registration') navigate(`/join/${t.slug}`)
+                    else if (t.status === 'finished') navigate(`/tournament/${t.slug}/finished`)
+                    else navigate(`/tournament/${t.slug}/bracket`)
+                  }}
                   className="dls-card p-4 flex items-center gap-4 cursor-pointer"
                   style={{ borderColor: 'rgba(22,163,74,0.3)' }}>
                   {t.logo_url

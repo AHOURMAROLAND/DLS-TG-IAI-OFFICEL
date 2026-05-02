@@ -43,11 +43,23 @@ export default function Home() {
   }
 
   const handleTournamentClick = (t: Tournament) => {
+    // Créateur → dashboard
     if (user && t.creator_id === user.id) {
       navigate(`/dashboard/${t.slug}`)
-    } else {
-      navigate(`/tournament/${t.slug}/bracket`)
+      return
     }
+    // Inscriptions ouvertes → page rejoindre
+    if (t.status === 'registration') {
+      navigate(`/join/${t.slug}`)
+      return
+    }
+    // Tournoi terminé → page résultats
+    if (t.status === 'finished') {
+      navigate(`/tournament/${t.slug}/finished`)
+      return
+    }
+    // En cours ou tirage → bracket/vue publique
+    navigate(`/tournament/${t.slug}/bracket`)
   }
 
   return (
