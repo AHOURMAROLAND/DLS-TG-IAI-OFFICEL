@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, Lock, UserCheck } from 'lucide-react'
+import { Trophy, Plus, LogIn, Zap, Users, Shield, Settings, Lock, UserCheck, User, Clock } from 'lucide-react'
 import { useTournaments } from '../hooks/useTournament'
 import { useQuery } from '@tanstack/react-query'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, formatTournamentDate } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
 import type { Tournament } from '../lib/api'
@@ -199,6 +199,8 @@ function TournamentRow({
     : role === 'player' ? '#4ADE80'
     : '#4D8EFF'
 
+  const dateStr = formatTournamentDate(t.created_at)
+
   return (
     <div onClick={onClick} className="dls-card p-4 flex items-center gap-4 cursor-pointer transition-all"
       style={{ borderColor }}>
@@ -224,6 +226,19 @@ function TournamentRow({
         <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
           {tournamentTypeLabel(t.tournament_type)} · {t.max_teams} équipes
         </p>
+        {/* Créateur + date */}
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          {t.creator_pseudo && (
+            <span className="flex items-center gap-1 text-xs" style={{ color: '#94A3B8' }}>
+              <User size={10} /> {t.creator_pseudo}
+            </span>
+          )}
+          {dateStr && (
+            <span className="flex items-center gap-1 text-xs" style={{ color: '#64748B' }}>
+              <Clock size={10} /> {dateStr}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <span className={tournamentStatusClass(t.status)}>

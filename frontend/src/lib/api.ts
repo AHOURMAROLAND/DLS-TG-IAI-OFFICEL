@@ -43,8 +43,10 @@ export interface Tournament {
   qualified_per_group: number
   elimination_round: string
   status: TournamentStatus
-  visibility: 'public' | 'private'  // défaut "public" pour les tournois v1
+  visibility: 'public' | 'private'
   creator_id: string
+  creator_pseudo?: string | null   // pseudo du créateur
+  created_at?: string | null       // date/heure ISO 8601
 }
 
 export interface AuthUser {

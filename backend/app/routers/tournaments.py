@@ -115,7 +115,7 @@ async def create_tournament_json(
     await db.commit()
     await db.refresh(tournament)
     logger.info(f"Tournoi créé par {current_user.pseudo}: {tournament.name} ({tournament.slug})")
-    return TournamentOut.from_db(tournament)
+    return TournamentOut.from_db(tournament, current_user.pseudo)
 
 
 @router.post("/")
@@ -193,7 +193,7 @@ async def create_tournament(
     await db.refresh(tournament)
 
     logger.info(f"Tournoi créé par {current_user.pseudo}: {tournament.name} ({tournament.slug})")
-    return TournamentOut.from_db(tournament)
+    return TournamentOut.from_db(tournament, current_user.pseudo)
 
 
 @router.get("/")
@@ -205,23 +205,25 @@ async def get_tournaments(
     Sans auth : retourne uniquement les tournois publics.
     Avec auth : retourne les publics + les tournois du user (créés ou rejoints).
     """
+    from sqlalchemy import or_
+
     if current_user is None:
         result = await db.execute(
-            select(Tournament)
+            select(Tournament, User.pseudo.label("creator_pseudo"))
+            .join(User, User.id == Tournament.creator_id, isouter=True)
             .where(Tournament.visibility == "public")
             .order_by(Tournament.created_at.desc())
         )
-        return [TournamentOut.from_db(t) for t in result.scalars().all()]
+        return [TournamentOut.from_db(t, pseudo) for t, pseudo in result.all()]
 
-    # Utilisateur connecté : publics + ses propres tournois (privés inclus)
-    from sqlalchemy import or_
     players_result = await db.execute(
         select(Player.tournament_id).where(Player.user_id == current_user.id)
     )
     participating_ids = [row[0] for row in players_result.all()]
 
     result = await db.execute(
-        select(Tournament)
+        select(Tournament, User.pseudo.label("creator_pseudo"))
+        .join(User, User.id == Tournament.creator_id, isouter=True)
         .where(
             or_(
                 Tournament.visibility == "public",
@@ -231,7 +233,7 @@ async def get_tournaments(
         )
         .order_by(Tournament.created_at.desc())
     )
-    return [TournamentOut.from_db(t) for t in result.scalars().all()]
+    return [TournamentOut.from_db(t, pseudo) for t, pseudo in result.all()]
 
 
 @router.get("/mine")
@@ -241,11 +243,12 @@ async def get_my_tournaments(
 ):
     """Retourne les tournois créés par l'utilisateur connecté."""
     result = await db.execute(
-        select(Tournament)
+        select(Tournament, User.pseudo.label("creator_pseudo"))
+        .join(User, User.id == Tournament.creator_id, isouter=True)
         .where(Tournament.creator_id == current_user.id)
         .order_by(Tournament.created_at.desc())
     )
-    return [TournamentOut.from_db(t) for t in result.scalars().all()]
+    return [TournamentOut.from_db(t, pseudo) for t, pseudo in result.all()]
 
 
 @router.get("/participating")
@@ -264,20 +267,26 @@ async def get_participating_tournaments(
         return []
 
     result = await db.execute(
-        select(Tournament)
+        select(Tournament, User.pseudo.label("creator_pseudo"))
+        .join(User, User.id == Tournament.creator_id, isouter=True)
         .where(Tournament.id.in_(tournament_ids))
         .order_by(Tournament.created_at.desc())
     )
-    return [TournamentOut.from_db(t) for t in result.scalars().all()]
+    return [TournamentOut.from_db(t, pseudo) for t, pseudo in result.all()]
 
 
 @router.get("/{slug}")
 async def get_tournament(slug: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Tournament).where(Tournament.slug == slug))
-    t = result.scalar_one_or_none()
-    if not t:
+    result = await db.execute(
+        select(Tournament, User.pseudo.label("creator_pseudo"))
+        .join(User, User.id == Tournament.creator_id, isouter=True)
+        .where(Tournament.slug == slug)
+    )
+    row = result.one_or_none()
+    if not row:
         raise HTTPException(404, "Tournoi introuvable")
-    return TournamentOut.from_db(t)
+    t, pseudo = row
+    return TournamentOut.from_db(t, pseudo)
 
 
 @router.get("/{slug}/logo")
@@ -347,7 +356,7 @@ async def update_tournament(
 
     await db.commit()
     await db.refresh(t)
-    return TournamentOut.from_db(t)
+    return TournamentOut.from_db(t, current_user.pseudo)
 
 
 @router.delete("/{slug}")

@@ -38,6 +38,25 @@ export function formatTimestamp(ts: number): string {
   })
 }
 
+/**
+ * Formate une date ISO pour l'affichage dans les cartes tournoi.
+ * Ex: "12 mai 2026 à 17:30"
+ */
+export function formatTournamentDate(isoDate: string | null | undefined): string {
+  if (!isoDate) return ''
+  try {
+    return new Date(isoDate).toLocaleString('fr-FR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
+}
+
 // ─── Fichiers ─────────────────────────────────────────────────────────────────
 
 export function formatFileSize(bytes: number): string {

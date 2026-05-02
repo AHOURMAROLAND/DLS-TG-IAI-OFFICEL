@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Settings, UserCheck, Plus, Trash2, LogIn } from 'lucide-react'
+import { Trophy, Settings, UserCheck, Plus, Trash2, LogIn, User, Clock } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
-import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel } from '../lib/utils'
+import { tournamentStatusLabel, tournamentStatusClass, tournamentTypeLabel, formatTournamentDate } from '../lib/utils'
 import api from '../lib/api'
 import type { Tournament } from '../lib/api'
 import { SkeletonMatchList } from '../components/ui/Skeleton'
@@ -109,6 +109,11 @@ export default function TournamentsList() {
                     <p className="text-xs" style={{ color: '#64748B' }}>
                       {tournamentTypeLabel(t.tournament_type)} · {t.max_teams} équipes
                     </p>
+                    {t.created_at && (
+                      <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#64748B' }}>
+                        <Clock size={10} /> {formatTournamentDate(t.created_at)}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className={tournamentStatusClass(t.status)}>
@@ -174,6 +179,18 @@ export default function TournamentsList() {
                     <p className="text-xs" style={{ color: '#64748B' }}>
                       {tournamentTypeLabel(t.tournament_type)} · {t.max_teams} équipes
                     </p>
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                      {t.creator_pseudo && (
+                        <span className="flex items-center gap-1 text-xs" style={{ color: '#94A3B8' }}>
+                          <User size={10} /> {t.creator_pseudo}
+                        </span>
+                      )}
+                      {t.created_at && (
+                        <span className="flex items-center gap-1 text-xs" style={{ color: '#64748B' }}>
+                          <Clock size={10} /> {formatTournamentDate(t.created_at)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span className={tournamentStatusClass(t.status)}>
                     {tournamentStatusLabel(t.status)}

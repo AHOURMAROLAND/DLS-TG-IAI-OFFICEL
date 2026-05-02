@@ -35,14 +35,16 @@ class TournamentOut(BaseModel):
     qualified_per_group: int
     elimination_round: str
     status: str
-    visibility: str  # "public" | "private" (v2)
+    visibility: str
     creator_id: str
+    creator_pseudo: Optional[str] = None   # pseudo du créateur
+    created_at: Optional[str] = None       # date/heure de création ISO 8601
 
     class Config:
         from_attributes = True
 
     @classmethod
-    def from_db(cls, tournament) -> "TournamentOut":
+    def from_db(cls, tournament, creator_pseudo: str | None = None) -> "TournamentOut":
         logo_url = None
         if tournament.logo_data and tournament.logo_content_type:
             b64 = b64encode(tournament.logo_data).decode("utf-8")
@@ -51,11 +53,23 @@ class TournamentOut(BaseModel):
         def _val(v):
             return v.value if hasattr(v, "value") else (v or "")
 
-        # Compatibilité v1 : visibility peut être None si la migration n'est pas encore appliquée
         try:
             vis = _val(tournament.visibility) or "public"
         except Exception:
             vis = "public"
+
+        # Formater created_at en ISO 8601 avec timezone
+        created_at_str = None
+        if tournament.created_at:
+            try:
+                from datetime import timezone
+                dt = tournament.created_at
+                if dt.tzinfo is None:
+                    # Pas de timezone → supposer UTC
+                    dt = dt.replace(tzinfo=timezone.utc)
+                created_at_str = dt.isoformat()
+            except Exception:
+                created_at_str = str(tournament.created_at)
 
         return cls(
             id=str(tournament.id),
@@ -73,4 +87,6 @@ class TournamentOut(BaseModel):
             status=_val(tournament.status),
             visibility=vis,
             creator_id=str(tournament.creator_id),
+            creator_pseudo=creator_pseudo,
+            created_at=created_at_str,
         )
