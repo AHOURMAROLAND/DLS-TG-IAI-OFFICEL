@@ -1,23 +1,23 @@
 /**
  * TournamentPublic — Page de détail d'un tournoi public
  *
- * Affichée quand un visiteur clique sur un tournoi depuis la Home.
- * Gère tous les cas selon le statut de l'utilisateur :
- *
- *  - Non connecté            → bouton "Se connecter pour s'inscrire"
- *  - Connecté, pas inscrit   → bouton "S'inscrire" (si inscriptions ouvertes)
- *  - Connecté, en attente    → message "Demande en attente"
- *  - Connecté, accepté       → bouton "Voir le tournoi"
- *  - Connecté, refusé        → message "Demande refusée" + possibilité de re-tenter
- *  - Créateur                → bouton "Gérer le tournoi"
- *  - Tournoi en cours/fini   → vue bracket/résultats directement
+ * Cas gérés :
+ *  - Non connecté / connecté sans inscription → propose S'inscrire + Ignorer
+ *  - Ignoré → affiche les stats avec un bandeau "Rejoindre" flottant si places dispo
+ *  - En attente → message attente
+ *  - Accepté → message + voir bracket
+ *  - Refusé → message refus
+ *  - Complet → message complet
+ *  - Créateur → gérer
+ *  - En cours / terminé → bracket / résultats
  */
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Trophy, Users, Clock, User, ArrowLeft,
-  CheckCircle, XCircle, Timer, Settings, LogIn, ArrowRight
+  CheckCircle, XCircle, Timer, Settings, LogIn,
+  ArrowRight, Eye, BarChart2, Calendar, Grid
 } from 'lucide-react'
 import api from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -28,6 +28,26 @@ import {
 import type { Tournament, Player } from '../lib/api'
 import { SkeletonMatchList } from '../components/ui/Skeleton'
 
+// Clé localStorage pour mémoriser les tournois ignorés
+const IGNORED_KEY = 'dls_ignored_tournaments'
+
+function getIgnored(): string[] {
+  try { return JSON.parse(localStorage.getItem(IGNORED_KEY) || '[]') } catch { return [] }
+}
+function setIgnored(slugs: string[]) {
+  localStorage.setItem(IGNORED_KEY, JSON.stringify(slugs))
+}
+function isIgnored(slug: string): boolean {
+  return getIgnored().includes(slug)
+}
+function addIgnored(slug: string) {
+  const list = getIgnored()
+  if (!list.includes(slug)) setIgnored([...list, slug])
+}
+function removeIgnored(slug: string) {
+  setIgnored(getIgnored().filter(s => s !== slug))
+}
+
 export default function TournamentPublic() {
   const navigate = useNavigate()
   const { slug } = useParams<{ slug: string }>()
@@ -37,9 +57,11 @@ export default function TournamentPublic() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [ignored, setIgnoredState] = useState(false)
 
   useEffect(() => {
     if (!slug) return
+    setIgnoredState(isIgnored(slug))
     load()
   }, [slug])
 
@@ -49,7 +71,7 @@ export default function TournamentPublic() {
     try {
       const [t, ps] = await Promise.all([
         api.getTournament(slug!.toLowerCase()),
-        api.getTournamentPlayers(slug!.toLowerCase()).catch(() => []),
+        api.getTournamentPlayers(slug!.toLowerCase()).catch(() => [] as Player[]),
       ])
       setTournament(t)
       setPlayers(ps)
@@ -58,6 +80,17 @@ export default function TournamentPublic() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleIgnore = () => {
+    addIgnored(slug!)
+    setIgnoredState(true)
+  }
+
+  const handleJoinFromIgnored = () => {
+    removeIgnored(slug!)
+    setIgnoredState(false)
+    navigate(`/register/${slug}`)
   }
 
   if (loading) return (
@@ -80,18 +113,17 @@ export default function TournamentPublic() {
 
   const accepted = players.filter(p => p.status === 'accepted').length
   const isFull = accepted >= tournament.max_teams
-  const isCreator = user && tournament.creator_id === user.id
-
-  // Statut de l'utilisateur dans ce tournoi
+  const isCreator = !!(user && tournament.creator_id === user.id)
   const myPlayer = user ? players.find(p => p.user_id === user.id) : null
   const myStatus = myPlayer?.status ?? null
-
   const dateStr = formatTournamentDate(tournament.created_at)
 
-  // ── Rendu du CTA selon le contexte ──────────────────────────────────────
+  // L'user peut encore rejoindre si : inscriptions ouvertes, pas plein, pas déjà inscrit
+  const canStillJoin = tournament.status === 'registration' && !isFull && !myStatus && !isCreator
+
+  // ── CTA principal ────────────────────────────────────────────────────────
 
   const renderCTA = () => {
-    // Créateur → dashboard
     if (isCreator) {
       return (
         <button onClick={() => navigate(`/dashboard/${tournament.slug}`)}
@@ -101,7 +133,6 @@ export default function TournamentPublic() {
       )
     }
 
-    // Tournoi terminé
     if (tournament.status === 'finished') {
       return (
         <button onClick={() => navigate(`/tournament/${tournament.slug}/finished`)}
@@ -111,7 +142,6 @@ export default function TournamentPublic() {
       )
     }
 
-    // Tournoi en cours → voir le bracket
     if (tournament.status === 'in_progress' || tournament.status === 'draw') {
       return (
         <button onClick={() => navigate(`/tournament/${tournament.slug}/bracket`)}
@@ -121,7 +151,6 @@ export default function TournamentPublic() {
       )
     }
 
-    // Inscriptions ouvertes
     if (tournament.status === 'registration') {
       // Déjà accepté
       if (myStatus === 'accepted') {
@@ -145,7 +174,7 @@ export default function TournamentPublic() {
         )
       }
 
-      // En attente de validation
+      // En attente
       if (myStatus === 'pending') {
         return (
           <div className="rounded-xl p-4 flex items-center gap-3"
@@ -161,25 +190,23 @@ export default function TournamentPublic() {
         )
       }
 
-      // Refusé → peut re-tenter
+      // Refusé
       if (myStatus === 'rejected') {
         return (
-          <div className="flex flex-col gap-3">
-            <div className="rounded-xl p-4 flex items-center gap-3"
-              style={{ background: 'rgba(168,11,28,0.1)', border: '1px solid rgba(168,11,28,0.3)' }}>
-              <XCircle size={20} style={{ color: '#F87171', flexShrink: 0 }} />
-              <div>
-                <p className="font-semibold" style={{ color: '#F87171' }}>Demande refusée</p>
-                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-                  Le créateur a refusé ta demande.
-                </p>
-              </div>
+          <div className="rounded-xl p-4 flex items-center gap-3"
+            style={{ background: 'rgba(168,11,28,0.1)', border: '1px solid rgba(168,11,28,0.3)' }}>
+            <XCircle size={20} style={{ color: '#F87171', flexShrink: 0 }} />
+            <div>
+              <p className="font-semibold" style={{ color: '#F87171' }}>Demande refusée</p>
+              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                Le créateur a refusé ta demande.
+              </p>
             </div>
           </div>
         )
       }
 
-      // Tournoi complet
+      // Complet
       if (isFull) {
         return (
           <div className="rounded-xl p-4 text-center"
@@ -213,22 +240,61 @@ export default function TournamentPublic() {
         )
       }
 
-      // Connecté, pas encore inscrit → S'inscrire
+      // Connecté, pas inscrit, pas ignoré → S'inscrire + Ignorer
+      if (!ignored) {
+        return (
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate(`/register/${tournament.slug}`)}
+              className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg,#1155CC,#1460E8)' }}>
+              <Users size={16} /> S'inscrire à ce tournoi
+            </button>
+            <button
+              onClick={handleIgnore}
+              className="dls-btn dls-btn-ghost dls-btn-full flex items-center justify-center gap-2"
+              style={{ color: '#64748B' }}>
+              <Eye size={15} /> Voir les stats sans s'inscrire
+            </button>
+          </div>
+        )
+      }
+
+      // Ignoré → juste un rappel discret en bas (bandeau flottant géré séparément)
       return (
-        <button
-          onClick={() => navigate(`/register/${tournament.slug}`)}
-          className="dls-btn dls-btn-primary dls-btn-full flex items-center justify-center gap-2"
-          style={{ background: 'linear-gradient(135deg,#1155CC,#1460E8)' }}>
-          <Users size={16} /> S'inscrire à ce tournoi
-        </button>
+        <div className="rounded-xl p-3 flex items-center justify-between gap-3"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(91,29,176,0.2)' }}>
+          <p className="text-xs" style={{ color: '#64748B' }}>
+            Tu consultes ce tournoi sans t'inscrire.
+          </p>
+          <button
+            onClick={() => { removeIgnored(slug!); setIgnoredState(false) }}
+            className="dls-btn dls-btn-sm flex-shrink-0"
+            style={{ color: '#4D8EFF', background: 'rgba(17,85,204,0.1)', border: '1px solid rgba(17,85,204,0.3)' }}>
+            Annuler
+          </button>
+        </div>
       )
     }
 
     return null
   }
 
+  // ── Onglets stats (visibles après "Ignorer") ─────────────────────────────
+
+  const STAT_TABS = [
+    { label: 'Participants', icon: <Users size={13} />, key: 'players' },
+    ...(tournament.tournament_type !== 'elimination'
+      ? [{ label: 'Classement', icon: <BarChart2 size={13} />, key: 'standings' }]
+      : []),
+    ...(tournament.tournament_type === 'groups'
+      ? [{ label: 'Poules', icon: <Grid size={13} />, key: 'groups' }]
+      : []),
+    { label: 'Calendrier', icon: <Calendar size={13} />, key: 'calendar' },
+  ]
+
   return (
-    <div className="dls-page max-w-lg mx-auto">
+    <div className="dls-page max-w-lg mx-auto pb-24">
       <button onClick={() => navigate(-1)}
         className="dls-btn dls-btn-ghost dls-btn-sm flex items-center gap-1.5 mb-6"
         style={{ color: '#94A3B8' }}>
@@ -288,7 +354,7 @@ export default function TournamentPublic() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Infos format */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           {[
             { label: 'Format', value: tournamentTypeLabel(tournament.tournament_type) },
@@ -297,7 +363,7 @@ export default function TournamentPublic() {
               ? [{ label: 'Élimination', value: tournament.elimination_type === 'double' ? 'Double' : 'Simple' }]
               : []),
             ...(tournament.tournament_type === 'championship'
-              ? [{ label: 'Format', value: tournament.championship_legs === 'double' ? 'Aller-retour' : 'Aller simple' }]
+              ? [{ label: 'Legs', value: tournament.championship_legs === 'double' ? 'Aller-retour' : 'Aller simple' }]
               : []),
             ...(tournament.tournament_type === 'groups' && tournament.group_count
               ? [{ label: 'Poules', value: `${tournament.group_count} × ${tournament.teams_per_group} équipes` }]
@@ -311,11 +377,34 @@ export default function TournamentPublic() {
           ))}
         </div>
 
-        {/* CTA principal */}
+        {/* CTA */}
         {renderCTA()}
       </div>
 
-      {/* ── Liste des joueurs acceptés ── */}
+      {/* ── Raccourcis stats (toujours visibles) ── */}
+      {(ignored || myStatus || tournament.status !== 'registration') && (
+        <div className="dls-card p-4 mb-4">
+          <p className="text-xs font-semibold mb-3" style={{ color: '#64748B' }}>
+            Explorer le tournoi
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {STAT_TABS.map(tab => (
+              <button key={tab.key}
+                onClick={() => navigate(`/tournament/${tournament.slug}/${tab.key}`)}
+                className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5">
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+            <button
+              onClick={() => navigate(`/tournament/${tournament.slug}/stats`)}
+              className="dls-btn dls-btn-secondary dls-btn-sm flex items-center gap-1.5">
+              <BarChart2 size={13} /> Stats
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Liste des participants ── */}
       {accepted > 0 && (
         <div className="dls-card p-4">
           <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
@@ -348,6 +437,37 @@ export default function TournamentPublic() {
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Bandeau flottant "Rejoindre" si ignoré et places dispo ── */}
+      {ignored && canStillJoin && (
+        <div
+          className="fixed bottom-4 left-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl"
+          style={{
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg,#1155CC,#1460E8)',
+            border: '1px solid rgba(77,142,255,0.4)',
+            boxShadow: '0 8px 32px rgba(17,85,204,0.4)',
+            maxWidth: 'calc(100vw - 2rem)',
+            width: 360,
+          }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Places disponibles !</p>
+            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {tournament.max_teams - accepted} place{tournament.max_teams - accepted > 1 ? 's' : ''} restante{tournament.max_teams - accepted > 1 ? 's' : ''}
+            </p>
+          </div>
+          <button
+            onClick={handleJoinFromIgnored}
+            className="dls-btn dls-btn-sm flex-shrink-0 font-bold"
+            style={{
+              background: '#fff',
+              color: '#1155CC',
+              border: 'none',
+            }}>
+            Rejoindre
+          </button>
         </div>
       )}
     </div>
