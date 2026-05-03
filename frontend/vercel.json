@@ -9,10 +9,6 @@
       "destination": "https://dls-hub-backend.onrender.com/og/join/:slug"
     },
     {
-      "source": "/tournament/:slug/:path*",
-      "destination": "https://dls-hub-backend.onrender.com/og/tournament/:slug"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
